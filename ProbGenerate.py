@@ -118,7 +118,7 @@ def main():
 
     logging.basicConfig(level=args.debug_level)
     random.seed(args.random_seed)
-    np.random.seed(args.random_seed + 2022)
+    np.random.seed(args.random_seed + 2023)
 
     logging.info('Generating ' + args.graph_type + ' graph')
     temp_graph = graphGenerator()  # use networkx to generate a graph

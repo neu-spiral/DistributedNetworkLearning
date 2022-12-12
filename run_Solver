@@ -1,11 +1,18 @@
 #! /bin/bash
 
-#for graph_type in geant abilene dtelekom
-#do
-#    sbatch ../script.sh distributedSolver.py --graph_type $graph_type
-#done
-
-for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
+for stepsize_FW in 0.01 0.001
 do
-    sbatch ../script.sh distributedSolver.py --graph_type $graph_type
+  for stepsize_PGA in 0.01 0.001
+  do
+    for graph_type in geant abilene dtelekom
+    do
+        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize_FW $stepsize_FW --stepsize_PGA $stepsize_PGA
+    done
+
+    for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
+    do
+        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize_FW $stepsize_FW --stepsize_PGA $stepsize_PGA
+    done
+
+  done
 done
