@@ -6,8 +6,7 @@ import logging, argparse
 import time
 
 
-class Gradient:
-
+class Learning:
     def __init__(self, P):
         self.sourceRates = P.sourceRates
         self.sources = P.sources
@@ -18,10 +17,29 @@ class Gradient:
         self.prior = P.prior
         self.T = P.T
         self.slToStp = P.slToStp
-        self.types = P.types
         self.sourceParameters = P.sourceParameters
 
         self.Dependencies()
+
+    def Dependencies(self):
+        """ For each edge, dependencies stores which (s,t),p would be affected. """
+        self.dependencies = {}
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                path = p.path
+                for i in range(len(path) - 1):
+                    edge = (path[i], path[i + 1])
+                    if edge in self.dependencies:
+                        if (s, t) in self.dependencies[edge]:
+                            self.dependencies[edge][(s, t)].append(p)
+                        else:
+                            self.dependencies[edge][(s, t)] = [p]
+                    else:
+                        self.dependencies[edge] = {(s, t): [p]}
+
+    def getLearnerRate(self, Y, s, l):
+        (s, t, p) = self.slToStp[(s, l)]
+        return Y[(s, t)][p]
 
     def objG(self, features, n, noices, cov):
         temp = 0
@@ -50,32 +68,12 @@ class Gradient:
 
         return obj
 
-    def Dependencies(self):
-        """ For each edge, dependencies stores which (s,t),p would be affected. """
-        self.dependencies = {}
-        for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
-                path = p.path
-                for i in range(len(path) - 1):
-                    edge = (path[i], path[i + 1])
-                    if edge in self.dependencies:
-                        if (s, t) in self.dependencies[edge]:
-                            self.dependencies[edge][(s, t)].append(p)
-                        else:
-                            self.dependencies[edge][(s, t)] = [p]
-                    else:
-                        self.dependencies[edge] = {(s, t): [p]}
-
-    def getLearnerRate(self, Y, s, l):
-        (s, t, p) = self.slToStp[(s, l)]
-        return Y[(s, t)][p]
-
-    def generate_sample1(self, Y, l):
+    def generate_sample1(self, Y, l, tol=1e-5):
         n = {}
         for s in self.sources:
             rate = self.getLearnerRate(Y, s, l)
-            if np.isnan(rate) or rate < 0:
-                print(Y)
+            if -tol < rate < 0:
+                rate = 0
             n[s] = np.random.poisson(rate * self.T)
 
         return n
@@ -90,6 +88,39 @@ class Gradient:
 
         return features
 
+    def plus(self, x, y):
+        if x <= 0:
+            return max(y, 0)
+        else:
+            return y
+
+    def feasibility(self, Y, tol=1e-3):
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                if Y[(s, t)][p] < -tol:
+                    logging.debug("Source {}, type {}, learner {} has negative value: {}".format(s, t, p.learner,
+                                                                                                 Y[(s, t)][p]))
+
+        for e in self.dependencies:
+            temp = 0
+            for (s, t) in self.dependencies[e]:
+                temp_st = []
+                for p in self.dependencies[e][(s, t)]:
+                    temp_st.append(Y[(s, t)][p])
+                temp += max(temp_st)
+            if temp - self.bandwidth[e] > tol:
+                logging.debug("Edge {} with bandwidth {} has flow {}".format(e, self.bandwidth[e], temp))
+
+        for (s, t) in self.paths:
+            temp = 0
+            for p in self.paths[(s, t)]:
+                temp += Y[(s, t)][p]
+            if temp - self.sourceRates[(s, t)] > tol:
+                logging.debug("Source {}, type {} with rate {} has flow {}".format(s, t, self.sourceRates[(s, t)],
+                                                                                   temp))
+
+
+class Gradient(Learning):
     def Estimate_Gradient(self, Y, head, N1, N2):
 
         Z = {}
@@ -131,41 +162,10 @@ class Gradient:
             for p in self.paths[(s, t)]:
                 Y[(s, t)][p] += gamma * D[(s, t)][p]
 
-    def plus(self, x, y):
-        if x <= 0:
-            return max(y, 0)
-        else:
-            return y
-
-    def feasibility(self, Y, tol=1e-3):
-        for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
-                if Y[(s, t)][p] < -tol:
-                    logging.debug("Source {}, type {}, learner {} has negative value: {}".format(s, t, p.learner,
-                                                                                                 Y[(s, t)][p]))
-
-        for e in self.dependencies:
-            temp = 0
-            for (s, t) in self.dependencies[e]:
-                temp_st = []
-                for p in self.dependencies[e][(s, t)]:
-                    temp_st.append(Y[(s, t)][p])
-                temp += max(temp_st)
-            if temp - self.bandwidth[e] > tol:
-                logging.debug("Edge {} with bandwidth {} has flow {}".format(e, self.bandwidth[e], temp))
-
-        for (s, t) in self.paths:
-            temp = 0
-            for p in self.paths[(s, t)]:
-                temp += Y[(s, t)][p]
-            if temp - self.sourceRates[(s, t)] > tol:
-                logging.debug("Source {}, type {} with rate {} has flow {}".format(s, t, self.sourceRates[(s, t)],
-                                                                                   temp))
-
     def alg(self, iterations, head, N1, N2, stepsize):
         pass
 
-    def Lagrangian(self, Z, D, Q, R, U):
+    def Lagrangian(self, Z, D, Q, R, U, n):
         pass
 
 
@@ -352,7 +352,6 @@ class FrankWolf(Gradient):
             else:
                 D = self.find_max(Z)
             self.adapt(Y, D, gamma)
-            # print(t, Y)
 
             # Z1 = self.Estimate_Gradient(Y1, head, N1, N2)
             # Z2 = self.Estimate_Gradient(Y2, head, N1, N2)
@@ -363,12 +362,22 @@ class FrankWolf(Gradient):
             # for (s, T) in self.paths:
             #     for p in self.paths[(s, T)]:
             #         obj += D1[(s, T)][p] * Z2[(s, T)][p]
-            # print("optimal value:", obj)
+            # print("optimal value: ", obj)
             # D2 = self.find_max(Z2)
+            #
+            # distance = 0
+            # for (s, T) in self.paths:
+            #     for p in self.paths[(s, T)]:
+            #         distance += abs(D1[(s, T)][p] - D2[(s, T)][p])
+            # print("distance: ", distance)
+            #
+            # self.objU(D1, 20, 20)
+            #
             # self.adapt(Y1, D1, gamma)
             # self.adapt(Y1, D2, gamma)
             #
             # print(t)
+
         self.feasibility(Y)
         return Y
 
@@ -545,7 +554,6 @@ class ProjectAscent(Gradient):
                 Y = self.project_distributed(Y, 1000, stepsize)
             else:
                 Y = self.project(Y)
-            # print(t, Y)
 
             # Z1 = self.Estimate_Gradient(Y1, head, N1, N2)
             # Z2 = self.Estimate_Gradient(Y2, head, N1, N2)
@@ -557,14 +565,334 @@ class ProjectAscent(Gradient):
             # for (s, T) in self.paths:
             #     for p in self.paths[(s, T)]:
             #         obj += (D1[(s, T)][p] - Y1[(s, T)][p]) ** 2
-            # print("optimal value:", obj)
+            # print("optimal value: ", obj)
             # D2 = self.project(Y2)
+            #
+            # distance = 0
+            # for (s, T) in self.paths:
+            #     for p in self.paths[(s, T)]:
+            #         distance += abs(D1[(s, T)][p] - D2[(s, T)][p])
+            # print("distance: ", distance)
             #
             # Y1 = D1
             # Y2 = D2
+            # print(t)
+
         self.feasibility(Y)
 
         return Y
+
+
+class MaxTP(Learning):
+    def centralAlg(self):
+        constr = []
+
+        D = {}
+        for (s, t) in self.paths:
+            D[(s, t)] = {}
+            for p in self.paths[(s, t)]:
+                D[(s, t)][p] = cp.Variable()
+                constr.append(D[(s, t)][p] >= 0)
+
+        for e in self.dependencies:
+            '''Realize it using max function instead of approximation'''
+            temp = 0
+            for (s, t) in self.dependencies[e]:
+                st_size = len(self.dependencies[e][(s, t)])
+                temp_st = cp.Variable(st_size)
+                for i in range(st_size):
+                    p = self.dependencies[e][(s, t)][i]
+                    constr.append(temp_st[i] == D[(s, t)][p])
+                temp += cp.max(temp_st)
+            constr.append(temp <= self.bandwidth[e])
+
+        for (s, t) in self.paths:
+            temp = 0
+            for p in self.paths[(s, t)]:
+                temp += D[(s, t)][p]
+            constr.append(temp <= self.sourceRates[(s, t)])
+
+        obj = 0
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                obj += D[(s, t)][p]
+
+        problem = cp.Problem(cp.Maximize(obj), constr)
+        problem.solve()
+        logging.debug("status: " + problem.status)
+        logging.debug("optimal values: " + str(problem.value))
+
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                D[(s, t)][p] = D[(s, t)][p].value
+
+        self.feasibility(D)
+        return D
+
+    def distributedAlg(self, iterations, stepsize):
+        n = 10
+
+        Q_new, Q_old = {}, {}
+        for e in self.dependencies:
+            Q_new[e], Q_old[e] = 0, 0
+
+        R_new, R_old = {}, {}
+        for (s, t) in self.sourceRates:
+            R_new[(s, t)], R_old[(s, t)] = 0, 0
+
+        U_new, U_old = {}, {}
+        D_new, D_old = {}, {}
+        for (s, t) in self.paths:
+            U_new[(s, t)], U_old[(s, t)] = {}, {}
+            D_new[(s, t)], D_old[(s, t)] = {}, {}
+            for p in self.paths[(s, t)]:
+                U_new[(s, t)][p], U_old[(s, t)][p] = 0, 0
+                D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0
+
+        for i in range(iterations):
+            temp_Q = {}
+            for e in self.dependencies:
+                Q_new[e] = Q_old[e]
+                temp = 0
+                for (s, t) in self.dependencies[e]:
+                    temp_st = 0
+                    for p in self.dependencies[e][(s, t)]:
+                        temp_st += pow(D_old[(s, t)][p], n)
+                    temp += pow(temp_st, 1. / n)
+                temp -= self.bandwidth[e]
+                temp_Q[e] = temp
+                temp = np.expm1(temp)
+                Q_new[e] += stepsize * self.plus(Q_old[e], temp)
+
+            temp_R = {}
+            for (s, t) in self.paths:
+                R_new[(s, t)] = R_old[(s, t)]
+                temp = 0
+                for p in self.paths[(s, t)]:
+                    temp += D_old[(s, t)][p]
+                temp -= self.sourceRates[(s, t)]
+                temp_R[(s, t)] = temp
+                temp = np.expm1(temp)
+                R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
+
+            for (s, t) in self.paths:
+                for p in self.paths[(s, t)]:
+                    U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
+                                                                               np.expm1(-D_old[(s, t)][p]))
+
+                    temp = 0
+                    path = p.path
+                    for j in range(len(path) - 1):
+                        edge = (path[j], path[j + 1])
+                        temp_e = 0
+                        for p_e in self.dependencies[edge][(s, t)]:
+                            temp_e += pow(D_old[(s, t)][p_e], n)
+                        if temp_e:
+                            temp += Q_old[edge] * np.exp(temp_Q[edge]) * pow(temp_e, 1. / n - 1)
+                        else:
+                            temp += Q_old[edge] * np.exp(temp_Q[edge])
+                    temp *= pow(D_old[(s, t)][p], n - 1)
+
+                    D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
+                                1 - temp - R_old[(s, t)] * np.exp(temp_R[(s, t)])
+                                + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
+
+                U_old[(s, t)] = U_new[(s, t)].copy()
+                D_old[(s, t)] = D_new[(s, t)].copy()
+            Q_old, R_old = Q_new.copy(), R_new.copy()
+
+        self.feasibility(D_new)
+        return D_new
+
+    def Lagrangian(self, D, Q, R, U, n):
+        L = 0
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                L += D[(s, t)][p]
+
+        for e in self.dependencies:
+            temp = 0
+            for (s, t) in self.dependencies[e]:
+                temp_st = 0
+                for p in self.dependencies[e][(s, t)]:
+                    temp_st += pow(D[(s, t)][p], n)
+                temp += pow(temp_st, 1. / n)
+            temp -= self.bandwidth[e]
+            temp = np.expm1(temp)
+            L -= Q[e] * temp
+
+        for (s, t) in self.paths:
+            temp = 0
+            for p in self.paths[(s, t)]:
+                temp += D[(s, t)][p]
+            temp -= self.sourceRates[(s, t)]
+            temp = np.expm1(temp)
+            L -= R[(s, t)] * temp
+
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                L -= U[(s, t)][p] * np.expm1(-D[(s, t)][p])
+        return L
+
+
+class MaxFair(Learning):
+    def utility(self, x, alpha):
+        if alpha == 1.0:
+            return cp.log(x)
+        else:
+            return x ** (1 - alpha) / (1 - alpha)
+
+    def centralAlg(self, alpha):
+        constr = []
+
+        D = {}
+        for (s, t) in self.paths:
+            D[(s, t)] = {}
+            for p in self.paths[(s, t)]:
+                D[(s, t)][p] = cp.Variable()
+                constr.append(D[(s, t)][p] >= 0)
+
+        for e in self.dependencies:
+            '''Realize it using max function instead of approximation'''
+            temp = 0
+            for (s, t) in self.dependencies[e]:
+                st_size = len(self.dependencies[e][(s, t)])
+                temp_st = cp.Variable(st_size)
+                for i in range(st_size):
+                    p = self.dependencies[e][(s, t)][i]
+                    constr.append(temp_st[i] == D[(s, t)][p])
+                temp += cp.max(temp_st)
+            constr.append(temp <= self.bandwidth[e])
+
+        for (s, t) in self.paths:
+            temp = 0
+            for p in self.paths[(s, t)]:
+                temp += D[(s, t)][p]
+            constr.append(temp <= self.sourceRates[(s, t)])
+
+        obj = 0
+        for l in self.learners:
+            obj_l = 0
+            for s in self.sources:
+                (s, t, p) = self.slToStp[(s, l)]
+                obj_l += D[(s, t)][p]
+            obj += self.utility(obj_l, alpha)
+
+        problem = cp.Problem(cp.Maximize(obj), constr)
+        problem.solve()
+        logging.debug("status: " + problem.status)
+        logging.debug("optimal values: " + str(problem.value))
+
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                D[(s, t)][p] = D[(s, t)][p].value
+
+        self.feasibility(D)
+        return D
+
+    def distributedAlg(self, alpha, iterations, stepsize):
+        n = 10
+
+        Q_new, Q_old = {}, {}
+        for e in self.dependencies:
+            Q_new[e], Q_old[e] = 0, 0
+
+        R_new, R_old = {}, {}
+        for (s, t) in self.sourceRates:
+            R_new[(s, t)], R_old[(s, t)] = 0, 0
+
+        U_new, U_old = {}, {}
+        D_new, D_old = {}, {}
+        for (s, t) in self.paths:
+            U_new[(s, t)], U_old[(s, t)] = {}, {}
+            D_new[(s, t)], D_old[(s, t)] = {}, {}
+            for p in self.paths[(s, t)]:
+                U_new[(s, t)][p], U_old[(s, t)][p] = 0, 0
+                D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0.1
+
+        for i in range(iterations):
+            for e in self.dependencies:
+                Q_new[e] = Q_old[e]
+                temp = 0
+                for (s, t) in self.dependencies[e]:
+                    temp_st = 0
+                    for p in self.dependencies[e][(s, t)]:
+                        temp_st += pow(D_old[(s, t)][p], n)
+                    temp += pow(temp_st, 1. / n)
+                temp -= self.bandwidth[e]
+                Q_new[e] += stepsize * self.plus(Q_old[e], temp)
+
+            for (s, t) in self.paths:
+                R_new[(s, t)] = R_old[(s, t)]
+                temp = 0
+                for p in self.paths[(s, t)]:
+                    temp += D_old[(s, t)][p]
+                temp -= self.sourceRates[(s, t)]
+                R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
+
+            for (s, t) in self.paths:
+                for p in self.paths[(s, t)]:
+                    U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
+                                                                                            -D_old[(s, t)][p])
+
+                    temp = 0
+                    path = p.path
+                    for j in range(len(path) - 1):
+                        edge = (path[j], path[j + 1])
+                        temp_e = 0
+                        for p_e in self.dependencies[edge][(s, t)]:
+                            temp_e += pow(D_old[(s, t)][p_e], n)
+                        if temp_e:
+                            temp += Q_old[edge] * pow(temp_e, 1. / n - 1)
+                        else:
+                            temp += Q_old[edge]
+                    temp *= pow(D_old[(s, t)][p], n - 1)
+
+                    temp_sum = 0
+                    l = p.learner
+                    for source in self.sources:
+                        temp_sum += self.getLearnerRate(D_old, source, l)
+
+                    D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (temp_sum ** (-alpha) - temp -
+                                R_old[(s, t)] + U_old[(s, t)][p])
+
+                U_old[(s, t)] = U_new[(s, t)].copy()
+                D_old[(s, t)] = D_new[(s, t)].copy()
+            Q_old, R_old = Q_new.copy(), R_new.copy()
+
+        self.feasibility(D_new)
+        return D_new
+
+    def Lagrangian(self, D, Q, R, U, n, alpha):
+        L = 0
+        for l in self.learners:
+            obj_l = 0
+            for s in self.sources:
+                (s, t, p) = self.slToStp[(s, l)]
+                obj_l += D[(s, t)][p]
+            L += self.utility(obj_l, alpha)
+
+        for e in self.dependencies:
+            temp = 0
+            for (s, t) in self.dependencies[e]:
+                temp_st = 0
+                for p in self.dependencies[e][(s, t)]:
+                    temp_st += pow(D[(s, t)][p], n)
+                temp += pow(temp_st, 1. / n)
+            temp -= self.bandwidth[e]
+            L -= Q[e] * temp
+
+        for (s, t) in self.paths:
+            temp = 0
+            for p in self.paths[(s, t)]:
+                temp += D[(s, t)][p]
+            temp -= self.sourceRates[(s, t)]
+            L -= R[(s, t)] * temp
+
+        for (s, t) in self.paths:
+            for p in self.paths[(s, t)]:
+                L += U[(s, t)][p] * U[(s, t)][p]
+        return L
 
 
 if __name__ == '__main__':
@@ -576,8 +904,9 @@ if __name__ == '__main__':
                                  'lollipop', 'expander', 'hypercube', 'star', 'barabasi_albert', 'watts_strogatz',
                                  'regular', 'powerlaw_tree', 'small_world', 'geant', 'abilene', 'dtelekom',
                                  'servicenetwork'])
-    parser.add_argument('--stepsize_FW', default=0.01, type=float, help="stepsize for FW")
-    parser.add_argument('--stepsize_PGA', default=0.01, type=float, help="stepsize for PGA")
+    parser.add_argument('--stepsize', default=0.01, type=float, help="stepsize")
+    parser.add_argument('--solver', type=str, help='solver type',
+                        choices=['FW', 'PGA', 'MaxFair', 'MaxTP'])
 
     parser.add_argument('--random_seed', default=19930101, type=int, help='Random seed')
     parser.add_argument('--debug_level', default='DEBUG', type=str, help='Debug Level',
@@ -594,29 +923,55 @@ if __name__ == '__main__':
     with open(fname, 'rb') as f:
         P = pickle.load(f)
 
-    alg1 = FrankWolf(P)
-    t1 = time.time()
-    Y1 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize_FW)
-    obj1 = alg1.objU(Y=Y1, N1=10, N2=10)
-    t2 = time.time()
-    print(t2-t1, Y1, obj1)
-    Y2 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=0)
-    obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
-    t3 = time.time()
-    print(t3-t2, Y2, obj2)
+    if args.solver == 'FW':
+        alg1 = FrankWolf(P)
+        t1 = time.time()
+        Y1 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize)
+        obj1 = alg1.objU(Y=Y1, N1=10, N2=10)
+        t2 = time.time()
+        print(t2-t1, Y1, obj1)
+        Y2 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=0)
+        obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
+        t3 = time.time()
+        print(t3-t2, Y2, obj2)
 
-    alg4 = ProjectAscent(P)
-    t4 = time.time()
-    Y6 = alg4.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize_PGA)
-    obj6 = alg4.objU(Y=Y6, N1=20, N2=20)
-    t5 = time.time()
-    print(t5-t4, Y6, obj6)
-    Y7 = alg4.alg(iterations=50, head=20, N1=20, N2=20, stepsize=0)
-    obj7 = alg4.objU(Y=Y7, N1=20, N2=20)
-    t6 = time.time()
-    print(t6-t5, Y7, obj7)
+    if args.solver == 'PGA':
+        alg1 = ProjectAscent(P)
+        t1 = time.time()
+        Y1 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize)
+        obj1 = alg1.objU(Y=Y1, N1=20, N2=20)
+        t2 = time.time()
+        print(t2-t1, Y1, obj1)
+        Y2 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=0)
+        obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
+        t3 = time.time()
+        print(t3-t2, Y2, obj2)
 
-    fname = 'Result/Result_{}_{}FW_{}PGA'.format(args.graph_type, args.stepsize_FW, args.stepsize_PGA)
+    if args.solver == 'MaxTP':
+        alg1 = MaxTP(P)
+        t1 = time.time()
+        Y1 = alg1.distributedAlg(iterations=1000, stepsize=args.stepsize)
+        obj1 = alg1.objU(Y=Y1, N1=20, N2=20)
+        t2 = time.time()
+        print(t2-t1, Y1, obj1)
+        Y2 = alg1.centralAlg()
+        obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
+        t3 = time.time()
+        print(t3-t2, Y2, obj2)
+
+    if args.solver == 'MaxFair':
+        alg1 = MaxFair(P)
+        t1 = time.time()
+        Y1 = alg1.distributedAlg(alpha=5, iterations=1000, stepsize=args.stepsize)
+        obj1 = alg1.objU(Y=Y1, N1=20, N2=20)
+        t2 = time.time()
+        print(t2-t1, Y1, obj1)
+        Y2 = alg1.centralAlg(alpha=5)
+        obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
+        t3 = time.time()
+        print(t3-t2, Y2, obj2)
+
+    fname = 'Result_{}/Result_{}_{}stepsize'.format(args.solver, args.graph_type, args.stepsize)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
-        pickle.dump([(Y1, obj1), (Y2, obj2), (Y6, obj6), (Y7, obj7)], f)
+        pickle.dump([(Y1, obj1), (Y2, obj2)], f)

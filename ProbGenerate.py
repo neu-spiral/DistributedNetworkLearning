@@ -8,7 +8,7 @@ import random
 
 
 class Problem:
-    def __init__(self, sourceRates, sources, learners, bandwidth, G, paths, prior, T, slToStp, types, sourceParameters):
+    def __init__(self, sourceRates, sources, learners, bandwidth, G, paths, prior, T, slToStp, sourceParameters):
         self.sourceRates = sourceRates
         self.sources = sources
         self.learners = learners
@@ -18,7 +18,6 @@ class Problem:
         self.prior = prior
         self.T = T
         self.slToStp = slToStp
-        self.types = types
         self.sourceParameters = sourceParameters
 
 
@@ -153,7 +152,11 @@ def main():
         bandwidth[e] = random.uniform(args.min_bandwidth, args.max_bandwidth)
 
     logging.info('Generating types')
-    types = random.choices(range(args.types), k=args.learners)
+    if args.learners <= args.types:
+        types = list(range(args.learners))
+    if args.learners > args.types:
+        types = list(range(args.types))
+        types += random.choices(range(args.types), k=args.learners - args.types)
     l_t_tuple = list(zip(learners, types))
     l_t_dict = dict(l_t_tuple)
 
@@ -211,7 +214,7 @@ def main():
                 slToStp[(s, l)] = (s, t, paths[(s, t)][-1])
         i += 1
 
-    P = Problem(sourceRates, sources, learners, bandwidth, G, paths, prior, args.T, slToStp, types, sourceParameters)
+    P = Problem(sourceRates, sources, learners, bandwidth, G, paths, prior, args.T, slToStp, sourceParameters)
     fname = 'Problem/Problem_' + args.graph_type
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:

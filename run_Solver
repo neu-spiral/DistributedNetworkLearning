@@ -1,17 +1,17 @@
 #! /bin/bash
 
-for stepsize_FW in 0.01 0.001
+for solver in FW PGA MaxFair MaxTP
 do
-  for stepsize_PGA in 0.01 0.001
+  for stepsize in 0.1 0.05 0.01 0.005 0.001
   do
     for graph_type in geant abilene dtelekom
     do
-        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize_FW $stepsize_FW --stepsize_PGA $stepsize_PGA
+        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver
     done
 
-    for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
+    for graph_type in grid_2d erdos_renyi balanced_tree hypercube star grid_2d small_world
     do
-        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize_FW $stepsize_FW --stepsize_PGA $stepsize_PGA
+        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver
     done
 
   done
