@@ -9,7 +9,7 @@ do
         sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver
     done
 
-    for graph_type in grid_2d erdos_renyi balanced_tree hypercube star grid_2d small_world
+    for graph_type in grid_2d erdos_renyi balanced_tree hypercube star small_world
     do
         sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver
     done

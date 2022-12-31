@@ -25,8 +25,8 @@ class Learning:
         """ For each edge, dependencies stores which (s,t),p would be affected. """
         self.dependencies = {}
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
-                path = p.path
+            for p in range(len(self.paths[(s, t)])):
+                path = self.paths[(s, t)][p].path
                 for i in range(len(path) - 1):
                     edge = (path[i], path[i + 1])
                     if edge in self.dependencies:
@@ -96,9 +96,11 @@ class Learning:
 
     def feasibility(self, Y, tol=1e-3):
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 if Y[(s, t)][p] < -tol:
-                    logging.debug("Source {}, type {}, learner {} has negative value: {}".format(s, t, p.learner,
+                    logging.debug("Source {}, type {}, learner {} has negative value: {}".format(s, t,
+                                                                                                 self.paths[(s, t)][
+                                                                                                     p].learner,
                                                                                                  Y[(s, t)][p]))
 
         for e in self.dependencies:
@@ -113,7 +115,7 @@ class Learning:
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += Y[(s, t)][p]
             if temp - self.sourceRates[(s, t)] > tol:
                 logging.debug("Source {}, type {} with rate {} has flow {}".format(s, t, self.sourceRates[(s, t)],
@@ -126,7 +128,7 @@ class Gradient(Learning):
         Z = {}
         for (s, t) in self.paths:
             Z[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Z[(s, t)][p] = 0
 
         for l in self.learners:
@@ -159,7 +161,7 @@ class Gradient(Learning):
 
     def adapt(self, Y, D, gamma):
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Y[(s, t)][p] += gamma * D[(s, t)][p]
 
     def alg(self, iterations, head, N1, N2, stepsize):
@@ -173,7 +175,7 @@ class FrankWolf(Gradient):
     def Lagrangian(self, Z, D, Q, R, U, n):
         L = 0
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 L += D[(s, t)][p] * Z[(s, t)][p]
 
         for e in self.dependencies:
@@ -189,14 +191,14 @@ class FrankWolf(Gradient):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             temp -= self.sourceRates[(s, t)]
             temp = np.expm1(temp)
             L -= R[(s, t)] * temp
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 L -= U[(s, t)][p] * np.expm1(-D[(s, t)][p])
         return L
 
@@ -222,7 +224,7 @@ class FrankWolf(Gradient):
         for (s, t) in self.paths:
             U_new[(s, t)], U_old[(s, t)] = {}, {}
             D_new[(s, t)], D_old[(s, t)] = {}, {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 U_new[(s, t)][p], U_old[(s, t)][p] = 0, 0
                 D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0
 
@@ -245,7 +247,7 @@ class FrankWolf(Gradient):
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
                 temp = 0
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     temp += D_old[(s, t)][p]
                 temp -= self.sourceRates[(s, t)]
                 temp_R[(s, t)] = temp
@@ -253,12 +255,12 @@ class FrankWolf(Gradient):
                 R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
 
             for (s, t) in self.paths:
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
                                                                                np.expm1(-D_old[(s, t)][p]))
 
                     temp = 0
-                    path = p.path
+                    path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
                         temp_e = 0
@@ -271,8 +273,8 @@ class FrankWolf(Gradient):
                     temp *= pow(D_old[(s, t)][p], n - 1)
 
                     D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
-                                Z[(s, t)][p] - temp - R_old[(s, t)] * np.exp(temp_R[(s, t)])
-                                + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
+                            Z[(s, t)][p] - temp - R_old[(s, t)] * np.exp(temp_R[(s, t)])
+                            + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -286,7 +288,7 @@ class FrankWolf(Gradient):
         D = {}
         for (s, t) in self.paths:
             D[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = cp.Variable()
                 constr.append(D[(s, t)][p] >= 0)
 
@@ -304,13 +306,13 @@ class FrankWolf(Gradient):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             constr.append(temp <= self.sourceRates[(s, t)])
 
         obj = 0
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 obj += D[(s, t)][p] * Z[(s, t)][p]
 
         problem = cp.Problem(cp.Maximize(obj), constr)
@@ -319,7 +321,7 @@ class FrankWolf(Gradient):
         logging.debug("optimal values: " + str(problem.value))
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = D[(s, t)][p].value
 
         return D
@@ -329,19 +331,19 @@ class FrankWolf(Gradient):
         Y = {}
         for (s, t) in self.paths:
             Y[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Y[(s, t)][p] = 0
 
         Y1 = {}
         for (s, t) in self.paths:
             Y1[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Y1[(s, t)][p] = 0
 
         Y2 = {}
         for (s, t) in self.paths:
             Y2[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Y2[(s, t)][p] = 0
 
         gamma = 1. / iterations
@@ -360,22 +362,22 @@ class FrankWolf(Gradient):
             # self.feasibility(D1)
             # obj = 0
             # for (s, T) in self.paths:
-            #     for p in self.paths[(s, T)]:
+            #     for p in range(len(self.paths[(s, t)])):
             #         obj += D1[(s, T)][p] * Z2[(s, T)][p]
             # print("optimal value: ", obj)
             # D2 = self.find_max(Z2)
             #
             # distance = 0
             # for (s, T) in self.paths:
-            #     for p in self.paths[(s, T)]:
+            #     for p in range(len(self.paths[(s, t)])):
             #         distance += abs(D1[(s, T)][p] - D2[(s, T)][p])
             # print("distance: ", distance)
             #
             # self.objU(D1, 20, 20)
             #
             # self.adapt(Y1, D1, gamma)
-            # self.adapt(Y1, D2, gamma)
-            #
+            # self.adapt(Y2, D2, gamma)
+
             # print(t)
 
         self.feasibility(Y)
@@ -386,8 +388,8 @@ class ProjectAscent(Gradient):
     def Lagrangian(self, Z, D, Q, R, U, n):
         L = 0
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
-                L -= (D[(s,t)][p] - Z[(s,t)][p]) ** 2
+            for p in range(len(self.paths[(s, t)])):
+                L -= (D[(s, t)][p] - Z[(s, t)][p]) ** 2
 
         for e in self.dependencies:
             temp = 0
@@ -401,13 +403,13 @@ class ProjectAscent(Gradient):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             temp -= self.sourceRates[(s, t)]
             L -= R[(s, t)] * temp
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 L += U[(s, t)][p] * U[(s, t)][p]
         return L
 
@@ -432,7 +434,7 @@ class ProjectAscent(Gradient):
         for (s, t) in self.paths:
             U_new[(s, t)], U_old[(s, t)] = {}, {}
             D_new[(s, t)], D_old[(s, t)] = {}, {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 U_new[(s, t)][p], U_old[(s, t)][p] = 0, 0
                 D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0
 
@@ -451,18 +453,18 @@ class ProjectAscent(Gradient):
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
                 temp = 0
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     temp += D_old[(s, t)][p]
                 temp -= self.sourceRates[(s, t)]
                 R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
 
             for (s, t) in self.paths:
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
-                                                                                            -D_old[(s, t)][p])
+                                                                               -D_old[(s, t)][p])
 
                     temp = 0
-                    path = p.path
+                    path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
                         temp_e = 0
@@ -475,8 +477,8 @@ class ProjectAscent(Gradient):
                     temp *= pow(D_old[(s, t)][p], n - 1)
 
                     D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
-                                -2 * (D_old[(s, t)][p] - Y[(s, t)][p]) - temp -
-                                R_old[(s, t)] + U_old[(s, t)][p])
+                            -2 * (D_old[(s, t)][p] - Y[(s, t)][p]) - temp -
+                            R_old[(s, t)] + U_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -490,7 +492,7 @@ class ProjectAscent(Gradient):
         D = {}
         for (s, t) in self.paths:
             D[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = cp.Variable()
                 constr.append(D[(s, t)][p] >= 0)
 
@@ -508,14 +510,14 @@ class ProjectAscent(Gradient):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             constr.append(temp <= self.sourceRates[(s, t)])
 
         obj = 0
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
-                obj += (D[(s,t)][p] - Y[(s,t)][p]) ** 2
+            for p in range(len(self.paths[(s, t)])):
+                obj += (D[(s, t)][p] - Y[(s, t)][p]) ** 2
 
         problem = cp.Problem(cp.Minimize(obj), constr)
         problem.solve()
@@ -523,7 +525,7 @@ class ProjectAscent(Gradient):
         logging.debug("optimal values: " + str(problem.value))
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = D[(s, t)][p].value
 
         return D
@@ -532,19 +534,19 @@ class ProjectAscent(Gradient):
         Y = {}
         for (s, t) in self.paths:
             Y[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Y[(s, t)][p] = 0
 
         Y1 = {}
         for (s, t) in self.paths:
             Y1[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Y1[(s, t)][p] = 0
 
         Y2 = {}
         for (s, t) in self.paths:
             Y2[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 Y2[(s, t)][p] = 0
 
         for t in range(iterations):
@@ -563,14 +565,14 @@ class ProjectAscent(Gradient):
             # D1 = self.project_distributed(Y1, 1000, stepsize)
             # obj = 0
             # for (s, T) in self.paths:
-            #     for p in self.paths[(s, T)]:
+            #     for p in range(len(self.paths[(s, t)])):
             #         obj += (D1[(s, T)][p] - Y1[(s, T)][p]) ** 2
             # print("optimal value: ", obj)
             # D2 = self.project(Y2)
             #
             # distance = 0
             # for (s, T) in self.paths:
-            #     for p in self.paths[(s, T)]:
+            #     for p in range(len(self.paths[(s, t)])):
             #         distance += abs(D1[(s, T)][p] - D2[(s, T)][p])
             # print("distance: ", distance)
             #
@@ -590,7 +592,7 @@ class MaxTP(Learning):
         D = {}
         for (s, t) in self.paths:
             D[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = cp.Variable()
                 constr.append(D[(s, t)][p] >= 0)
 
@@ -608,13 +610,13 @@ class MaxTP(Learning):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             constr.append(temp <= self.sourceRates[(s, t)])
 
         obj = 0
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 obj += D[(s, t)][p]
 
         problem = cp.Problem(cp.Maximize(obj), constr)
@@ -623,7 +625,7 @@ class MaxTP(Learning):
         logging.debug("optimal values: " + str(problem.value))
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = D[(s, t)][p].value
 
         self.feasibility(D)
@@ -645,7 +647,7 @@ class MaxTP(Learning):
         for (s, t) in self.paths:
             U_new[(s, t)], U_old[(s, t)] = {}, {}
             D_new[(s, t)], D_old[(s, t)] = {}, {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 U_new[(s, t)][p], U_old[(s, t)][p] = 0, 0
                 D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0
 
@@ -668,7 +670,7 @@ class MaxTP(Learning):
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
                 temp = 0
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     temp += D_old[(s, t)][p]
                 temp -= self.sourceRates[(s, t)]
                 temp_R[(s, t)] = temp
@@ -676,12 +678,12 @@ class MaxTP(Learning):
                 R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
 
             for (s, t) in self.paths:
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
                                                                                np.expm1(-D_old[(s, t)][p]))
 
                     temp = 0
-                    path = p.path
+                    path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
                         temp_e = 0
@@ -694,8 +696,8 @@ class MaxTP(Learning):
                     temp *= pow(D_old[(s, t)][p], n - 1)
 
                     D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
-                                1 - temp - R_old[(s, t)] * np.exp(temp_R[(s, t)])
-                                + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
+                            1 - temp - R_old[(s, t)] * np.exp(temp_R[(s, t)])
+                            + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -707,7 +709,7 @@ class MaxTP(Learning):
     def Lagrangian(self, D, Q, R, U, n):
         L = 0
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 L += D[(s, t)][p]
 
         for e in self.dependencies:
@@ -723,14 +725,14 @@ class MaxTP(Learning):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             temp -= self.sourceRates[(s, t)]
             temp = np.expm1(temp)
             L -= R[(s, t)] * temp
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 L -= U[(s, t)][p] * np.expm1(-D[(s, t)][p])
         return L
 
@@ -748,7 +750,7 @@ class MaxFair(Learning):
         D = {}
         for (s, t) in self.paths:
             D[(s, t)] = {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = cp.Variable()
                 constr.append(D[(s, t)][p] >= 0)
 
@@ -766,7 +768,7 @@ class MaxFair(Learning):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             constr.append(temp <= self.sourceRates[(s, t)])
 
@@ -784,7 +786,7 @@ class MaxFair(Learning):
         logging.debug("optimal values: " + str(problem.value))
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 D[(s, t)][p] = D[(s, t)][p].value
 
         self.feasibility(D)
@@ -806,7 +808,7 @@ class MaxFair(Learning):
         for (s, t) in self.paths:
             U_new[(s, t)], U_old[(s, t)] = {}, {}
             D_new[(s, t)], D_old[(s, t)] = {}, {}
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 U_new[(s, t)][p], U_old[(s, t)][p] = 0, 0
                 D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0.1
 
@@ -825,18 +827,18 @@ class MaxFair(Learning):
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
                 temp = 0
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     temp += D_old[(s, t)][p]
                 temp -= self.sourceRates[(s, t)]
                 R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
 
             for (s, t) in self.paths:
-                for p in self.paths[(s, t)]:
+                for p in range(len(self.paths[(s, t)])):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
-                                                                                            -D_old[(s, t)][p])
+                                                                               -D_old[(s, t)][p])
 
                     temp = 0
-                    path = p.path
+                    path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
                         temp_e = 0
@@ -849,12 +851,12 @@ class MaxFair(Learning):
                     temp *= pow(D_old[(s, t)][p], n - 1)
 
                     temp_sum = 0
-                    l = p.learner
+                    l = self.paths[(s, t)][p].learner
                     for source in self.sources:
                         temp_sum += self.getLearnerRate(D_old, source, l)
 
                     D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (temp_sum ** (-alpha) - temp -
-                                R_old[(s, t)] + U_old[(s, t)][p])
+                                                                      R_old[(s, t)] + U_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -884,13 +886,13 @@ class MaxFair(Learning):
 
         for (s, t) in self.paths:
             temp = 0
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 temp += D[(s, t)][p]
             temp -= self.sourceRates[(s, t)]
             L -= R[(s, t)] * temp
 
         for (s, t) in self.paths:
-            for p in self.paths[(s, t)]:
+            for p in range(len(self.paths[(s, t)])):
                 L += U[(s, t)][p] * U[(s, t)][p]
         return L
 
@@ -929,11 +931,11 @@ if __name__ == '__main__':
         Y1 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize)
         obj1 = alg1.objU(Y=Y1, N1=10, N2=10)
         t2 = time.time()
-        print(t2-t1, Y1, obj1)
+        print(t2 - t1, Y1, obj1)
         Y2 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=0)
         obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
         t3 = time.time()
-        print(t3-t2, Y2, obj2)
+        print(t3 - t2, Y2, obj2)
 
     if args.solver == 'PGA':
         alg1 = ProjectAscent(P)
@@ -941,11 +943,11 @@ if __name__ == '__main__':
         Y1 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize)
         obj1 = alg1.objU(Y=Y1, N1=20, N2=20)
         t2 = time.time()
-        print(t2-t1, Y1, obj1)
+        print(t2 - t1, Y1, obj1)
         Y2 = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=0)
         obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
         t3 = time.time()
-        print(t3-t2, Y2, obj2)
+        print(t3 - t2, Y2, obj2)
 
     if args.solver == 'MaxTP':
         alg1 = MaxTP(P)
@@ -953,11 +955,11 @@ if __name__ == '__main__':
         Y1 = alg1.distributedAlg(iterations=1000, stepsize=args.stepsize)
         obj1 = alg1.objU(Y=Y1, N1=20, N2=20)
         t2 = time.time()
-        print(t2-t1, Y1, obj1)
+        print(t2 - t1, Y1, obj1)
         Y2 = alg1.centralAlg()
         obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
         t3 = time.time()
-        print(t3-t2, Y2, obj2)
+        print(t3 - t2, Y2, obj2)
 
     if args.solver == 'MaxFair':
         alg1 = MaxFair(P)
@@ -965,11 +967,11 @@ if __name__ == '__main__':
         Y1 = alg1.distributedAlg(alpha=5, iterations=1000, stepsize=args.stepsize)
         obj1 = alg1.objU(Y=Y1, N1=20, N2=20)
         t2 = time.time()
-        print(t2-t1, Y1, obj1)
+        print(t2 - t1, Y1, obj1)
         Y2 = alg1.centralAlg(alpha=5)
         obj2 = alg1.objU(Y=Y2, N1=20, N2=20)
         t3 = time.time()
-        print(t3-t2, Y2, obj2)
+        print(t3 - t2, Y2, obj2)
 
     fname = 'Result_{}/Result_{}_{}stepsize'.format(args.solver, args.graph_type, args.stepsize)
     logging.info('Save in ' + fname)

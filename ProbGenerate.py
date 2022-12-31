@@ -157,6 +157,7 @@ def main():
     if args.learners > args.types:
         types = list(range(args.types))
         types += random.choices(range(args.types), k=args.learners - args.types)
+    # types = random.choices(range(args.types), k=args.learners)
     l_t_tuple = list(zip(learners, types))
     l_t_dict = dict(l_t_tuple)
 
@@ -211,7 +212,7 @@ def main():
                     paths[(s, t)].append(Path(G, s, l))
                 else:
                     paths[(s, t)] = [Path(G, s, l)]
-                slToStp[(s, l)] = (s, t, paths[(s, t)][-1])
+                slToStp[(s, l)] = (s, t, len(paths[(s, t)]) - 1)
         i += 1
 
     P = Problem(sourceRates, sources, learners, bandwidth, G, paths, prior, args.T, slToStp, sourceParameters)
