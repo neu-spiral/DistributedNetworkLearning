@@ -141,10 +141,10 @@ def main():
     logging.debug('G is:' + str(G.nodes()) + str(G.edges()))
 
     logging.info('Generating sources')
-    sources = np.random.choice(range(graph_size), args.sources)
+    sources = random.sample(range(graph_size), args.sources)
 
     logging.info('Generating learners')
-    learners = np.random.choice(range(graph_size), args.learners)
+    learners = random.sample(range(graph_size), args.learners)
 
     logging.info('Generating bandwidth')
     bandwidth = {}
