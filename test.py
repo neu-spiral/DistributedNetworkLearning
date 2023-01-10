@@ -902,11 +902,11 @@ if __name__ == '__main__':
 
     if args.solver == 'FW':
         alg1 = FrankWolf(P)
-        distances = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize)
+        distances = alg1.alg(iterations=50, head=20, N1=50, N2=50, stepsize=args.stepsize)
 
     if args.solver == 'PGA':
         alg1 = ProjectAscent(P)
-        distances = alg1.alg(iterations=50, head=20, N1=20, N2=20, stepsize=args.stepsize)
+        distances = alg1.alg(iterations=50, head=20, N1=50, N2=50, stepsize=args.stepsize)
 
     if args.solver == 'MaxTP':
         alg1 = MaxTP(P)
