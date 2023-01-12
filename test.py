@@ -68,11 +68,11 @@ class Learning:
 
         return obj
 
-    def generate_sample1(self, Y, l, tol=1e-5):
+    def generate_sample1(self, Y, l):
         n = {}
         for s in self.sources:
             rate = self.getLearnerRate(Y, s, l)
-            if -tol < rate < 0:
+            if rate < 0:
                 rate = 0
             n[s] = np.random.poisson(rate * self.T)
 
@@ -902,11 +902,11 @@ if __name__ == '__main__':
 
     if args.solver == 'FW':
         alg1 = FrankWolf(P)
-        distances = alg1.alg(iterations=50, head=20, N1=50, N2=50, stepsize=args.stepsize)
+        distances = alg1.alg(iterations=50, head=15, N1=50, N2=50, stepsize=args.stepsize)
 
     if args.solver == 'PGA':
         alg1 = ProjectAscent(P)
-        distances = alg1.alg(iterations=50, head=20, N1=50, N2=50, stepsize=args.stepsize)
+        distances = alg1.alg(iterations=50, head=15, N1=50, N2=50, stepsize=args.stepsize)
 
     if args.solver == 'MaxTP':
         alg1 = MaxTP(P)
@@ -918,8 +918,8 @@ if __name__ == '__main__':
 
     if args.solver == 'MaxFair':
         alg1 = MaxFair(P)
-        Y1 = alg1.distributedAlg(alpha=0.5, iterations=1000, stepsize=args.stepsize)
-        Y2 = alg1.centralAlg(alpha=0.5)
+        Y1 = alg1.distributedAlg(alpha=2, iterations=1000, stepsize=args.stepsize)
+        Y2 = alg1.centralAlg(alpha=2)
         distances = alg1.distance(Y1, Y2)
 
     fname = 'Result_dist_{}/Result_{}_{}stepsize'.format(args.solver, args.graph_type, args.stepsize)
