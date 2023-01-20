@@ -8,13 +8,16 @@ import logging
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
-topology_small = ['geant', 'abilene', 'dtelekom']
-topology_small_short = ['geant', 'abilene', 'dtelekom']
-topology = ['erdos_renyi', 'hypercube', 'star', 'small_world', 'grid_2d']
-topology_short = ['ER', 'HC', 'star', 'SW', 'grid']
-Dirs = ['FW', 'PGA', 'MaxTP', 'MaxFair']
-Stepsizes = [0.01, 0.1, 0.05, 0.05]
-Stepsizes_small = [0.01, 0.1, 0.1, 0.01]
+topology1 = ['erdos_renyi', 'geant', 'abilene', 'dtelekom']
+topology1_short = ['ER', 'geant', 'abilene', 'dtelekom']
+topology2 = ['hypercube', 'star', 'small_world', 'grid_2d']
+topology2_short = ['HC', 'star', 'SW', 'grid']
+topology3 = ['balanced_tree']
+topology3_short = ['BT']
+Stepsizes1 = [0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.001, 0.01]
+Stepsizes2 = [0.01, 0.01, 0.01, 0.01, 0.005, 0.01, 0.001, 0.01]
+Stepsizes3 = [0.005, 0.01, 0.01, 0.01, 0.005, 0.01, 0.001, 0.01]
+
 algorithm = ['DFW', 'FW', 'DPGA', 'PGA', 'DMaxTP', 'MaxTP', 'DMaxFair', 'MaxFair']
 hatches = ['/', '\\\\', '|', '+', '--', '', '////',  'x', 'o', '.', '\\']
 
@@ -28,7 +31,7 @@ def readresult(fname):
 def barplot(x, type):
     fig, ax = plt.subplots()
     fig.set_size_inches(10, 3)
-    N = len(topology) + len(topology_small)
+    N = len(topology1) + len(topology2) + len(topology3)
     numb_bars = len(algorithm)+1
     ind = np.arange(0,numb_bars*N ,numb_bars)
     width = 1
@@ -38,6 +41,8 @@ def barplot(x, type):
     ax.tick_params(labelsize=12)
     if type == 'Result':
         ylabel = 'Aggregate Utility'
+    elif type == 'Time' or type == 'InFeasibility':
+        ylabel = type
     elif type == 'beta':
         ylabel = 'Avg. Norm of Est. Error'
     ax.set_ylabel(ylabel, fontsize=15)
@@ -49,13 +54,13 @@ def barplot(x, type):
     fig.savefig('Figure/' + type + '.pdf', bbox_extra_artists=(lgd,), bbox_inches = 'tight')
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Plot topology',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--debug_level', default='DEBUG', type=str, help='Debug Level',
                         choices=['INFO', 'DEBUG', 'WARNING', 'ERROR'])
-    parser.add_argument('--type', default='Result', type=str, help='Plot est. error or utility', choices=['beta', 'Result'])
+    parser.add_argument('--type', default='Result', type=str, help='Plot est. error or utility',
+                        choices=['beta', 'Result', 'Time', 'InFeasibility'])
     args = parser.parse_args()
 
     args.debug_level = eval("logging." + args.debug_level)
@@ -64,35 +69,83 @@ if __name__ == '__main__':
     obj = {}
     for alg in algorithm:
         obj[alg] = {}
+    #
+    # fname = 'Result_PGA/Result_geant_0.1stepsize'
+    # result = readresult(fname)
 
     if args.type == 'Result':
-        for i in range(len(topology)):
-            for j in range(len(Dirs)):
-                fname = 'Result_{}/Result_{}_{}stepsize'.format(Dirs[j], topology[i], Stepsizes[j])
+        for i in range(len(topology1)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology1[i], Stepsizes1[j])
                 result = readresult(fname)
-                obj[algorithm[2 * j]][topology_short[i]] = result[0][1]
-                obj[algorithm[2 * j + 1]][topology_short[i]] = result[1][1]
+                obj[algorithm[j]][topology1_short[i]] = result[2]
+    elif args.type == 'Time':
+        for i in range(len(topology1)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology1[i], Stepsizes1[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology1_short[i]] = result[0]
+    elif args.type == 'InFeasibility':
+        for i in range(len(topology1)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology1[i], Stepsizes1[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology1_short[i]] = result[3][-1]
     elif args.type == 'beta':
-        for i in range(len(topology)):
-            for j in range(len(Dirs)):
-                fname = 'Result_{}/beta_{}_{}stepsize'.format(Dirs[j], topology[i], Stepsizes[j])
+        for i in range(len(topology1)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/beta_{}_{}stepsize'.format(algorithm[j], topology1[i], Stepsizes1[j])
                 result = readresult(fname)
-                obj[algorithm[2 * j]][topology_short[i]] = result[0]
-                obj[algorithm[2 * j + 1]][topology_short[i]] = result[1]
+                obj[algorithm[j]][topology1_short[i]] = result
 
     if args.type == 'Result':
-        for i in range(len(topology_small)):
-            for j in range(len(Dirs)):
-                fname = 'Result_{}/Result_{}_{}stepsize'.format(Dirs[j], topology_small[i], Stepsizes_small[j])
+        for i in range(len(topology2)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology2[i], Stepsizes2[j])
                 result = readresult(fname)
-                obj[algorithm[2 * j]][topology_small_short[i]] = result[0][1]
-                obj[algorithm[2 * j + 1]][topology_small_short[i]] = result[1][1]
+                obj[algorithm[j]][topology2_short[i]] = result[2]
+    elif args.type == 'Time':
+        for i in range(len(topology2)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology2[i], Stepsizes2[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology2_short[i]] = result
+    elif args.type == 'InFeasibility':
+        for i in range(len(topology2)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology2[i], Stepsizes2[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology2_short[i]] = result[3][-1]
     elif args.type == 'beta':
-        for i in range(len(topology_small)):
-            for j in range(len(Dirs)):
-                fname = 'Result_{}/beta_{}_{}stepsize'.format(Dirs[j], topology_small[i], Stepsizes_small[j])
+        for i in range(len(topology2)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/beta_{}_{}stepsize'.format(algorithm[j], topology2[i], Stepsizes2[j])
                 result = readresult(fname)
-                obj[algorithm[2 * j]][topology_small_short[i]] = result[0]
-                obj[algorithm[2 * j + 1]][topology_small_short[i]] = result[1]
+                obj[algorithm[j]][topology2_short[i]] = result
+
+    if args.type == 'Result':
+        for i in range(len(topology3)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology3[i], Stepsizes3[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology3_short[i]] = result[2]
+    elif args.type == 'Time':
+        for i in range(len(topology3)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology3[i], Stepsizes3[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology3_short[i]] = result
+    elif args.type == 'InFeasibility':
+        for i in range(len(topology3)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/Result_{}_{}stepsize'.format(algorithm[j], topology3[i], Stepsizes3[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology3_short[i]] = result[3][-1]
+    elif args.type == 'beta':
+        for i in range(len(topology3)):
+            for j in range(len(algorithm)):
+                fname = 'Result_15_{}/beta_{}_{}stepsize'.format(algorithm[j], topology3[i], Stepsizes3[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology3_short[i]] = result
 
     barplot(obj, args.type)
