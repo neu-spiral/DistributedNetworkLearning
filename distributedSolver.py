@@ -57,13 +57,15 @@ class Learning:
         for s in self.sources:
             zeros[s] = 0
         for l in self.learners:
+            noices = self.prior['noice'][l]
+            cov = self.prior['cov'][l]
+            obj2 = self.objG(zeros, zeros, noices, cov)
             for i in range(N1):
                 n = self.generate_sample1(Y, l)
                 for j in range(N2):
                     features = self.generate_sample2(n)
-                    noices = self.prior['noice'][l]
-                    cov = self.prior['cov'][l]
-                    obj += self.objG(features, n, noices, cov) - self.objG(zeros, zeros, noices, cov)
+                    obj1 = self.objG(features, n, noices, cov)
+                    obj += obj1 - obj2
         obj = obj / N1 / N2
 
         return obj
@@ -851,6 +853,9 @@ if __name__ == '__main__':
                                  'lollipop', 'expander', 'hypercube', 'star', 'barabasi_albert', 'watts_strogatz',
                                  'regular', 'powerlaw_tree', 'small_world', 'geant', 'abilene', 'dtelekom',
                                  'servicenetwork'])
+    parser.add_argument('--types', default=3, type=int, help='Number of types')
+    parser.add_argument('--learners', default=5, type=int, help='Number of learner')
+    parser.add_argument('--sources', default=3, type=int, help='Number of nodes generating data')
     parser.add_argument('--stepsize', default=0.01, type=float, help="stepsize")
     parser.add_argument('--solver', type=str, help='solver type',
                         choices=['DFW', 'FW', 'DPGA', 'PGA', 'DMaxFair', 'MaxFair', 'DMaxTP', 'MaxTP'])
@@ -865,7 +870,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.debug_level)
     np.random.seed(args.random_seed + 2023)
 
-    fname = 'Problem/Problem_' + args.graph_type
+    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
+        args.graph_type, args.learners, args.sources, args.types)
     logging.info('Read data from ' + fname)
     with open(fname, 'rb') as f:
         P = pickle.load(f)
@@ -942,7 +948,8 @@ if __name__ == '__main__':
         period = t2 - t1
         print(t2 - t1, Y, obj, feasibilities[-1])
 
-    fname = 'Result_15_{}/Result_{}_{}stepsize'.format(args.solver, args.graph_type, args.stepsize)
+    fname = 'Result_15_{}/Result_{}_{}learners_{}sources_{}types_{}stepsize'.format(
+        args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
         pickle.dump((period, Y, obj, feasibilities), f)

@@ -28,58 +28,68 @@ if __name__ == '__main__':
     args.debug_level = eval("logging." + args.debug_level)
     logging.basicConfig(level=args.debug_level)
 
-    fname = 'Result_15_{}/Result_{}_{}stepsize'.format(args.solver, args.graph_type, args.stepsize)
-
+    fname = 'Result_{}/Result_{}_{}learners_{}sources_{}types_{}stepsize'.format(
+        args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
     logging.info('Read data from ' + fname)
     with open(fname, 'rb') as f:
         results = pickle.load(f)
 
-    fname = "Problem/Problem_{}".format(args.graph_type)
+    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
+        args.graph_type, args.learners, args.sources, args.types)
     logging.info('Read data from ' + fname)
     with open(fname, 'rb') as f:
         P = pickle.load(f)
 
     learning = Learning(P)
-    beta = P.prior['beta']
+    mean = P.prior['mean']
     covariance = P.prior['cov']
     learners = P.learners
     T = P.T
 
-    N1 = 100
-    N2 = 100
+    N1 = 10
+    N2 = 50
+    N3 = 50
     result = results[1]
     dist = 0
     if result == 0:
         distance = 0
-    for l in learners:
-        noice = P.prior['noice'][l]
-        norm = 0
-        for j in range(N1):
-            n = learning.generate_sample1(result, l)
-            for i in range(N2):
-                features = learning.generate_sample2(n)
-                a = 0
-                b = 0
-                for s in features:
-                    for feature in features[s]:
-                        a += np.dot(feature, feature.transpose()) / noice[s]
-                        y = np.dot(feature.transpose(), beta[l]) + np.random.normal(0, noice[s])
-                        b += feature * y / noice[s]
-                temp1 = a + np.linalg.inv(covariance[l])
-                temp1 = np.linalg.inv(temp1)
-                temp2 = np.dot(np.linalg.inv(covariance[l]), beta[l]) + b
-                map_l = np.dot(temp1, temp2)
 
-                # norm_temp = np.linalg.norm(map_l - beta[l])
-                # if norm_temp > 1:
-                #     print(norm_temp)
-                norm += np.linalg.norm(map_l - beta[l])
-        norm = norm / N1 / N2
+    # obj = learning.objU(result, 50, 50)
+    for l in learners:
+        norm = 0
+        for k in range(N3):
+            beta = np.random.multivariate_normal(mean[l].reshape(len(mean[l])), covariance[l])
+            beta = beta.reshape((len(beta),1))
+            noice = P.prior['noice'][l]
+            for j in range(N1):
+                n = learning.generate_sample1(result, l)
+                for i in range(N2):
+                    features = learning.generate_sample2(n)
+                    a = 0
+                    b = 0
+                    for s in features:
+                        for feature in features[s]:
+                            # feature = feature * 0
+                            # feature[0: int(np.floor(len(features[s][i]) / 3)), 0] = [10] * int(np.floor(len(feature) / 3))
+
+                            a += np.dot(feature, feature.transpose()) / noice[s]
+                            y = np.dot(feature.transpose(), beta) + np.random.normal(0, noice[s])
+                            b += feature * y / noice[s]
+                    temp1 = a + np.linalg.inv(covariance[l])
+                    temp1 = np.linalg.inv(temp1)
+                    temp2 = np.dot(np.linalg.inv(covariance[l]), mean[l]) + b
+                    map_l = np.dot(temp1, temp2)
+
+                    # norm_temp = np.linalg.norm(map_l - beta)
+                    # if norm_temp < 1:
+                    #     print(norm_temp)
+                    norm += np.linalg.norm(map_l - beta)
+        norm = norm / N1 / N2 / N3
         dist += norm
     distance = dist / len(learners)
     print(distance)
-    fname = 'Result_15_{}/beta_{}_{}stepsize'.format(args.solver, args.graph_type, args.stepsize)
-
+    fname = 'Result_{}/beta_{}_{}learners_{}sources_{}types_{}stepsize'.format(
+        args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
         pickle.dump(distance, f)

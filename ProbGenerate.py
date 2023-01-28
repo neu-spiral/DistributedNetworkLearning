@@ -43,8 +43,8 @@ def main():
     parser.add_argument('--min_bandwidth', default=10, type=float, help='Minimum bandwidth of each edge')
     parser.add_argument('--max_bandwidth', default=20, type=float, help="Maximum bandwidth of each edge")
 
-    parser.add_argument('--min_datarate', default=2, type=float, help='Minimum data rate of each item at each sources')
-    parser.add_argument('--max_datarate', default=5, type=float, help="Maximum bandwidth of each edge")
+    parser.add_argument('--min_datarate', default=5, type=float, help='Minimum data rate of each item at each sources')
+    parser.add_argument('--max_datarate', default=8, type=float, help="Maximum bandwidth of each edge")
 
     parser.add_argument('--types', default=3, type=int, help='Number of types')
     parser.add_argument('--learners', default=5, type=int, help='Number of learner')
@@ -173,7 +173,7 @@ def main():
     prior = {}
     prior['noice'] = {}
     prior['cov'] = {}
-    prior['beta'] = {}
+    prior['mean'] = {}
     i = 0
     valid_dimension = int(np.floor(args.dimension / args.learners))
     noices = {}
@@ -182,13 +182,13 @@ def main():
             noices[(t, s)] = np.random.uniform(0.5, 1)
     for l in learners:
         diag = np.random.uniform(0, 0.01, args.dimension)
-        diag[i * valid_dimension:(i + 1) * valid_dimension] = np.random.uniform(100, 200, valid_dimension)
+        diag[i * valid_dimension:(i + 1) * valid_dimension] = np.random.uniform(1, 2, valid_dimension)
         prior['cov'][l] = np.diag(diag)
         prior['noice'][l] = {}
         for s in sources:
             prior['noice'][l][s] = noices[(l_t_dict[l], s)]
-        prior['beta'][l] = np.zeros((args.dimension, 1))
-        prior['beta'][l][i * valid_dimension:(i + 1) * valid_dimension] = np.ones((valid_dimension, 1))
+        prior['mean'][l] = np.zeros((args.dimension, 1))
+        prior['mean'][l][i * valid_dimension:(i + 1) * valid_dimension] = np.ones((valid_dimension, 1))
         i += 1
 
     logging.info('Generating source rates, paths and parameters of data')
@@ -201,10 +201,12 @@ def main():
     valid_dimension = int(np.floor(args.dimension / args.sources))
     i = 0
     for s in sources:
-        diag = np.zeros(args.dimension)
-        diag[i * valid_dimension:(i + 1) * valid_dimension] = np.random.uniform(1, 2, valid_dimension)
+        diag = np.random.uniform(0, 0.01, args.dimension)
+        diag[i * valid_dimension:(i + 1) * valid_dimension] = np.random.uniform(10, 20, valid_dimension)
         sourceParameters['cov'][s] = np.diag(diag)
-        sourceParameters['mean'][s] = np.zeros(args.dimension)
+        mean = np.zeros(args.dimension)
+        # mean[i * valid_dimension:(i + 1) * valid_dimension] = np.random.uniform(1, 2, valid_dimension)
+        sourceParameters['mean'][s] = mean
         for t in types:
             sourceRates[(s, t)] = np.random.uniform(args.min_datarate, args.max_datarate)
             for l in types[t]:
@@ -216,7 +218,8 @@ def main():
         i += 1
 
     P = Problem(sourceRates, sources, learners, bandwidth, G, paths, prior, args.T, slToStp, sourceParameters)
-    fname = 'Problem/Problem_' + args.graph_type
+    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
+        args.graph_type, args.learners, args.sources, args.types)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
         pickle.dump(P, f)
