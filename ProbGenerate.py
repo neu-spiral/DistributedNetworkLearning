@@ -43,8 +43,8 @@ def main():
     parser.add_argument('--min_bandwidth', default=10, type=float, help='Minimum bandwidth of each edge')
     parser.add_argument('--max_bandwidth', default=20, type=float, help="Maximum bandwidth of each edge")
 
-    parser.add_argument('--min_datarate', default=5, type=float, help='Minimum data rate of each item at each sources')
-    parser.add_argument('--max_datarate', default=8, type=float, help="Maximum bandwidth of each edge")
+    parser.add_argument('--min_datarate', default=5, type=float, help='Minimum data rate of each sources')
+    parser.add_argument('--max_datarate', default=8, type=float, help="Maximum data rate of each sources")
 
     parser.add_argument('--types', default=3, type=int, help='Number of types')
     parser.add_argument('--learners', default=5, type=int, help='Number of learner')
@@ -218,8 +218,8 @@ def main():
         i += 1
 
     P = Problem(sourceRates, sources, learners, bandwidth, G, paths, prior, args.T, slToStp, sourceParameters)
-    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
-        args.graph_type, args.learners, args.sources, args.types)
+    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types_{}rate'.format(
+        args.graph_type, args.learners, args.sources, args.types, int(args.max_datarate))
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
         pickle.dump(P, f)

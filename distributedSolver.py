@@ -857,8 +857,9 @@ if __name__ == '__main__':
     parser.add_argument('--learners', default=5, type=int, help='Number of learner')
     parser.add_argument('--sources', default=3, type=int, help='Number of nodes generating data')
     parser.add_argument('--stepsize', default=0.01, type=float, help="stepsize")
-    parser.add_argument('--solver', type=str, help='solver type',
+    parser.add_argument('--solver', default='DFW', type=str, help='solver type',
                         choices=['DFW', 'FW', 'DPGA', 'PGA', 'DMaxFair', 'MaxFair', 'DMaxTP', 'MaxTP'])
+    parser.add_argument('--max_datarate', default=8, type=float, help="Maximum data rate of each sources")
 
     parser.add_argument('--random_seed', default=19930101, type=int, help='Random seed')
     parser.add_argument('--debug_level', default='DEBUG', type=str, help='Debug Level',
@@ -870,8 +871,8 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.debug_level)
     np.random.seed(args.random_seed + 2023)
 
-    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
-        args.graph_type, args.learners, args.sources, args.types)
+    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types_{}rate'.format(
+        args.graph_type, args.learners, args.sources, args.types, int(args.max_datarate))
     logging.info('Read data from ' + fname)
     with open(fname, 'rb') as f:
         P = pickle.load(f)
@@ -879,7 +880,8 @@ if __name__ == '__main__':
     if args.solver == 'DFW':
         alg = FrankWolf(P)
         t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=15, N1=50, N2=50, stepsize=args.stepsize)
+        Y, feasibilities = alg.alg(iterations=50, head=max(15, 2 * int(args.max_datarate)),
+                                   N1=50, N2=50, stepsize=args.stepsize)
         t2 = time.time()
         obj = alg.objU(Y=Y, N1=100, N2=100)
         period = t2 - t1
@@ -888,7 +890,8 @@ if __name__ == '__main__':
     if args.solver == 'FW':
         alg = FrankWolf(P)
         t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=15, N1=50, N2=50, stepsize=0)
+        Y, feasibilities = alg.alg(iterations=50, head=max(15, 2 * int(args.max_datarate)),
+                                   N1=50, N2=50, stepsize=0)
         t2 = time.time()
         obj = alg.objU(Y=Y, N1=100, N2=100)
         period = t2 - t1
@@ -897,7 +900,8 @@ if __name__ == '__main__':
     if args.solver == 'DPGA':
         alg = ProjectAscent(P)
         t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=15, N1=50, N2=50, stepsize=args.stepsize)
+        Y, feasibilities = alg.alg(iterations=50, head=max(15, 2 * int(args.max_datarate)),
+                                   N1=50, N2=50, stepsize=args.stepsize)
         t2 = time.time()
         obj = alg.objU(Y=Y, N1=100, N2=100)
         period = t2 - t1
@@ -906,7 +910,8 @@ if __name__ == '__main__':
     if args.solver == 'PGA':
         alg = ProjectAscent(P)
         t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=15, N1=50, N2=50, stepsize=0)
+        Y, feasibilities = alg.alg(iterations=50, head=max(15, 2 * int(args.max_datarate)),
+                                   N1=50, N2=50, stepsize=0)
         t2 = time.time()
         obj = alg.objU(Y=Y, N1=100, N2=100)
         period = t2 - t1
@@ -948,8 +953,8 @@ if __name__ == '__main__':
         period = t2 - t1
         print(t2 - t1, Y, obj, feasibilities[-1])
 
-    fname = 'Result_15_{}/Result_{}_{}learners_{}sources_{}types_{}stepsize'.format(
-        args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
+    fname = 'Result_{}/Result_{}_{}learners_{}sources_{}types_{}rate_{}stepsize'.format(
+        args.solver, args.graph_type, args.learners, args.sources, args.types, int(args.max_datarate), args.stepsize)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
         pickle.dump((period, Y, obj, feasibilities), f)

@@ -46,9 +46,9 @@ if __name__ == '__main__':
     learners = P.learners
     T = P.T
 
-    N1 = 10
-    N2 = 50
-    N3 = 50
+    N1 = 50
+    N2 = 100
+    N3 = 100
     result = results[1]
     dist = 0
     if result == 0:
