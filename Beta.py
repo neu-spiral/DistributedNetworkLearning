@@ -47,8 +47,8 @@ if __name__ == '__main__':
     T = P.T
 
     N1 = 50
-    N2 = 100
-    N3 = 100
+    N2 = 50
+    N3 = 20
     result = results[1]
     dist = 0
     if result == 0:
@@ -75,6 +75,7 @@ if __name__ == '__main__':
                             a += np.dot(feature, feature.transpose()) / noice[s]
                             y = np.dot(feature.transpose(), beta) + np.random.normal(0, noice[s])
                             b += feature * y / noice[s]
+                    # cov_inv = np.linalg.inv(covariance[l])
                     temp1 = a + np.linalg.inv(covariance[l])
                     temp1 = np.linalg.inv(temp1)
                     temp2 = np.dot(np.linalg.inv(covariance[l]), mean[l]) + b

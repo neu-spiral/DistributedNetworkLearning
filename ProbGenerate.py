@@ -209,12 +209,14 @@ def main():
         sourceParameters['mean'][s] = mean
         for t in types:
             sourceRates[(s, t)] = np.random.uniform(args.min_datarate, args.max_datarate)
+            j = 0
             for l in types[t]:
                 if (s, t) in paths:
                     paths[(s, t)].append(Path(G, s, l))
                 else:
                     paths[(s, t)] = [Path(G, s, l)]
-                slToStp[(s, l)] = (s, t, len(paths[(s, t)]) - 1)
+                slToStp[(s, l)] = (s, t, j)
+                j += 1
         i += 1
 
     P = Problem(sourceRates, sources, learners, bandwidth, G, paths, prior, args.T, slToStp, sourceParameters)
