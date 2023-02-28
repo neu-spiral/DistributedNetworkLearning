@@ -146,16 +146,19 @@ class Gradient(Learning):
 
             for i in range(N1):
                 n = self.generate_sample1(Y, l)
+                head_h = {}  # dynamic head, max(head, 2*rate*T)
                 n_h = {}  # each arrival is greater than head
                 for s in n:
-                    n_h[s] = max(head, n[s])
+                    head_h[s] = int(np.ceil(2 * self.getLearnerRate(Y, s, l) * self.T))
+                    head_h[s] = max(head, head_h[s])
+                    n_h[s] = max(head_h[s], n[s])
                 for j in range(N2):
                     features = self.generate_sample2(n_h)
                     for s in self.sources:
                         n_copy = n.copy()
                         rate = self.getLearnerRate(Y, s, l)
                         delta = 0
-                        for h in range(head):
+                        for h in range(head_h[s]):
                             n_copy[s] = h + 1
                             obj1 = self.objG(features, n_copy, noices, cov)
                             n_copy[s] = h
@@ -354,7 +357,10 @@ class FrankWolf(Gradient):
 
         distances = []
         for t in range(iterations):
+            t1 = time.time()
             Z2 = self.Estimate_Gradient(Y2, head, N1, N2)
+            t2 = time.time()
+            print(t2 - t1)
             D1 = self.find_max_distributed(Z2, 1000, stepsize)
             self.feasibility(D1)
             obj = 0
@@ -881,6 +887,9 @@ if __name__ == '__main__':
                                  'lollipop', 'expander', 'hypercube', 'star', 'barabasi_albert', 'watts_strogatz',
                                  'regular', 'powerlaw_tree', 'small_world', 'geant', 'abilene', 'dtelekom',
                                  'servicenetwork'])
+    parser.add_argument('--types', default=3, type=int, help='Number of types')
+    parser.add_argument('--learners', default=5, type=int, help='Number of learner')
+    parser.add_argument('--sources', default=3, type=int, help='Number of nodes generating data')
     parser.add_argument('--stepsize', default=0.01, type=float, help="stepsize")
     parser.add_argument('--solver', type=str, help='solver type',
                         choices=['FW', 'PGA', 'MaxFair', 'MaxTP'])
@@ -895,18 +904,19 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.debug_level)
     np.random.seed(args.random_seed + 2023)
 
-    fname = 'Problem/Problem_' + args.graph_type
+    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
+        args.graph_type, args.learners, args.sources, args.types)
     logging.info('Read data from ' + fname)
     with open(fname, 'rb') as f:
         P = pickle.load(f)
 
     if args.solver == 'FW':
         alg1 = FrankWolf(P)
-        distances = alg1.alg(iterations=50, head=15, N1=50, N2=50, stepsize=args.stepsize)
+        distances = alg1.alg(iterations=50, head=15, N1=5, N2=5, stepsize=args.stepsize)
 
     if args.solver == 'PGA':
         alg1 = ProjectAscent(P)
-        distances = alg1.alg(iterations=50, head=15, N1=50, N2=50, stepsize=args.stepsize)
+        distances = alg1.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
 
     if args.solver == 'MaxTP':
         alg1 = MaxTP(P)
@@ -921,6 +931,8 @@ if __name__ == '__main__':
         Y1 = alg1.distributedAlg(alpha=2, iterations=1000, stepsize=args.stepsize)
         Y2 = alg1.centralAlg(alpha=2)
         distances = alg1.distance(Y1, Y2)
+        # obj1 = alg1.objU(Y=Y1, N1=50, N2=50)
+        # obj2 = alg1.objU(Y=Y2, N1=50, N2=50)
 
     fname = 'Result_dist_{}/Result_{}_{}stepsize'.format(args.solver, args.graph_type, args.stepsize)
     logging.info('Save in ' + fname)

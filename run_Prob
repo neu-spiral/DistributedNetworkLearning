@@ -1,14 +1,14 @@
 #! /bin/bash
 
-#for graph_type in geant abilene dtelekom
-#do
-#    sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --learners 3 --sources 3 --types 2 --min_bandwidth 5 --max_bandwidth 8
-#done
-#
-#for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
-#do
-#    sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --learners 5 --sources 10 --types 3 --min_bandwidth 5 --max_bandwidth 10
-#done
+for graph_type in geant abilene dtelekom
+do
+    sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --learners 3 --sources 3 --types 2 --min_bandwidth 5 --max_bandwidth 8
+done
+
+for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
+do
+    sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --learners 5 --sources 10 --types 3 --min_bandwidth 5 --max_bandwidth 10
+done
 
 
 #for sources in 2 4 5 6
@@ -43,15 +43,15 @@
 #  done
 #done
 
-for rate in 3 5 7 9 11
-do
-  for graph_type in geant abilene dtelekom
-  do
-      sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --min_datarate $rate --max_datarate $rate --learners 3 --sources 3 --types 2 --min_bandwidth 5 --max_bandwidth 8
-  done
-
-  for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
-  do
-      sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --min_datarate $rate --max_datarate $rate --learners 5 --sources 10 --types 3 --min_bandwidth 5 --max_bandwidth 10
-  done
-done
+#for rate in 3 5 7 9 11
+#do
+#  for graph_type in geant abilene dtelekom
+#  do
+#      sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --min_datarate $rate --max_datarate $rate --learners 3 --sources 3 --types 2 --min_bandwidth 5 --max_bandwidth 8
+#  done
+#
+#  for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
+#  do
+#      sbatch ../script.sh ProbGenerate.py --graph_type $graph_type --min_datarate $rate --max_datarate $rate --learners 5 --sources 10 --types 3 --min_bandwidth 5 --max_bandwidth 10
+#  done
+#done

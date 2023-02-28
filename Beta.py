@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--stepsize', default=0.01, type=float, help="stepsize for FW")
 
     parser.add_argument('--random_seed', default=19930101, type=int, help='Random seed')
-    parser.add_argument('--debug_level', default='INFO', type=str, help='Debug Level',
+    parser.add_argument('--debug_level', default='DEBUG', type=str, help='Debug Level',
                         choices=['INFO', 'DEBUG', 'WARNING', 'ERROR'])
 
     args = parser.parse_args()
@@ -86,6 +86,7 @@ if __name__ == '__main__':
                     #     print(norm_temp)
                     norm += np.linalg.norm(map_l - beta)
         norm = norm / N1 / N2 / N3
+        logging.debug(norm)
         dist += norm
     distance = dist / len(learners)
     print(distance)

@@ -2,7 +2,7 @@
 
 #for solver in DFW DPGA DMaxFair DMaxTP
 #do
-#  for stepsize in 0.1 0.05 0.01 0.005  0.001
+#  for stepsize in 0.1 0.05 0.01 0.005
 #  do
 #    for graph_type in geant abilene dtelekom
 #    do
@@ -16,6 +16,40 @@
 #  done
 #done
 #
+#for stepsize in 0.2 0.3 0.4
+#do
+#  for graph_type in geant abilene dtelekom
+#  do
+#    sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --learners 3 --sources 3 --types 2
+#  done
+#  for graph_type in erdos_renyi hypercube small_world grid_2d
+#  do
+#    sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxFair --learners 5 --sources 10 --types 3
+#  done
+#done
+
+for solver in DPGA DMaxFair DMaxTP #DFW
+do
+  for stepsize in 0.06 0.07 0.08 0.09
+  do
+    for graph_type in erdos_renyi hypercube
+    do
+        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver --learners 5 --sources 10 --types 3
+    done
+  done
+  for stepsize in 0.02 0.03 0.04
+  do
+#    for graph_type in geant abilene dtelekom
+#    do
+#      sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxTP --learners 3 --sources 3 --types 2
+#    done
+    for graph_type in erdos_renyi hypercube grid_2d balanced_tree star small_world
+    do
+        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver --learners 5 --sources 10 --types 3
+    done
+  done
+done
+
 #for solver in FW PGA MaxFair MaxTP
 #do
 #    for graph_type in geant abilene dtelekom
@@ -28,11 +62,11 @@
 #        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --solver $solver --learners 5 --sources 10 --types 3
 #    done
 #done
-
-
+#
+#
 #for solver in DFW DPGA DMaxFair DMaxTP
 #do
-#  for stepsize in 0.1 0.05 0.01 0.005 0.001
+#  for stepsize in 0.1 0.05 0.01 0.005
 #  do
 #    for sources in 2 4 5 6
 #    do
@@ -43,14 +77,61 @@
 #    done
 #    for sources in 5 8 12 15
 #    do
-#    for graph_type in grid_2d erdos_renyi balanced_tree hypercube star small_world
+#      for graph_type in grid_2d erdos_renyi balanced_tree hypercube star small_world
 #      do
 #          sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver --learners 5 --sources $sources --types 3
 #      done
 #    done
 #  done
 #done
-
+#
+#for stepsize in 0.2 0.3 0.4
+#do
+#  for sources in 2 4 5 6
+#  do
+#    for graph_type in geant abilene dtelekom
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --learners 3 --sources $sources --types 2
+#    done
+#  done
+#  for sources in 5 8 12 15
+#  do
+#    for graph_type in erdos_renyi hypercube small_world grid_2d
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxFair --learners 5 --sources $sources --types 3
+#    done
+#  done
+#done
+#
+#for stepsize in 0.06 0.07 0.08 0.09
+#do
+#  for sources in 5 8 12 15
+#  do
+#    for graph_type in erdos_renyi hypercube small_world
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --learners 5 --sources $sources --types 3
+#    done
+#  done
+#done
+#for stepsize in 0.02 0.03 0.04
+#do
+#  for sources in 2 4 5 6
+#  do
+#    for graph_type in geant abilene dtelekom
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxTP --learners 3 --sources $sources --types 2
+#    done
+#  done
+#  for sources in 5 8 12 15
+#  do
+#    for graph_type in erdos_renyi hypercube grid_2d balanced_tree star small_world
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --learners 5 --sources $sources --types 3
+#    done
+#  done
+#done
+#
+#
 #for solver in FW PGA MaxFair MaxTP
 #do
 #    for sources in 2 4 5 6
@@ -68,10 +149,11 @@
 #      done
 #    done
 #done
-
-#for solver in DPGA #DMaxFair DMaxTP DFW
+#
+#
+#for solver in DFW DPGA DMaxFair DMaxTP
 #do
-#  for stepsize in 0.1 0.05 0.01 0.005 0.001
+#  for stepsize in 0.1 0.05 0.01 0.005
 #  do
 #    for learners in 2 4 5 6
 #    do
@@ -90,7 +172,53 @@
 #  done
 #done
 #
-#for solver in FW PGA #MaxFair MaxTP
+#for stepsize in 0.2 0.3 0.4
+#do
+#  for learners in 2 4 5 6
+#  do
+#    for graph_type in geant abilene dtelekom
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --learners $learners --sources 3 --types 2
+#    done
+#  done
+#  for learners in 3 7 9 11
+#  do
+#    for graph_type in erdos_renyi hypercube small_world grid_2d
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxFair --learners $learners --sources 10 --types 3
+#    done
+#  done
+#done
+#
+#for stepsize in 0.06 0.07 0.08 0.09
+#do
+#  for learners in 3 7 9 11
+#  do
+#    for graph_type in erdos_renyi hypercube small_world
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --learners $learners --sources 10 --types 3
+#    done
+#  done
+#done
+#for stepsize in 0.02 0.03 0.04
+#do
+#  for learners in 2 4 5 6
+#  do
+#    for graph_type in geant abilene dtelekom
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxTP --learners $learners --sources 3 --types 2
+#    done
+#  done
+#  for learners in 3 7 9 11
+#  do
+#    for graph_type in erdos_renyi hypercube grid_2d balanced_tree star small_world
+#    do
+#        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --learners $learners --sources 10 --types 3
+#    done
+#  done
+#done
+#
+#for solver in FW PGA MaxFair MaxTP
 #do
 #    for learners in 2 4 5 6
 #    do
@@ -107,10 +235,11 @@
 #      done
 #    done
 #done
-
-#for solver in DPGA DMaxFair DMaxTP #DFW
+#
+#
+#for solver in DFW DPGA DMaxFair DMaxTP
 #do
-#  for stepsize in 0.1 0.05 0.01 0.005 0.001
+#  for stepsize in 0.1 0.05 0.01 0.005
 #  do
 #    for rate in 3 5 7 9 11
 #    do
@@ -119,15 +248,55 @@
 #        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver --max_datarate $rate --learners 3 --sources 3 --types 2
 #      done
 #
-#      for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
+#      for graph_type in grid_2d erdos_renyi balanced_tree hypercube star small_world
 #      do
 #        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver $solver --max_datarate $rate --learners 5 --sources 10 --types 3
 #      done
 #    done
 #  done
 #done
-
-
+#
+#for stepsize in 0.2 0.3 0.4
+#do
+#  for rate in 3 5 7 9 11
+#  do
+#    for graph_type in geant abilene dtelekom
+#    do
+#      sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --max_datarate $rate --learners 3 --sources 3 --types 2
+#    done
+#
+#    for graph_type in erdos_renyi hypercube small_world grid_2d
+#    do
+#      sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxFair --max_datarate $rate --learners 5 --sources 10 --types 3
+#    done
+#  done
+#done
+#
+#for stepsize in 0.06 0.07 0.08 0.09
+#do
+#  for rate in 3 5 7 9 11
+#  do
+#    for graph_type in erdos_renyi hypercube
+#    do
+#      sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --max_datarate $rate --learners 5 --sources 10 --types 3
+#    done
+#  done
+#done
+#for stepsize in 0.02 0.03 0.04
+#do
+#  for rate in 3 5 7 9 11
+#  do
+#    for graph_type in geant abilene dtelekom
+#    do
+#      sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DMaxTP --max_datarate $rate --learners 3 --sources 3 --types 2
+#    done
+#    for graph_type in hypercube grid_2d balanced_tree star small_world
+#    do
+#      sbatch ../script.sh distributedSolver.py --graph_type $graph_type --stepsize $stepsize --solver DFW --max_datarate $rate --learners 5 --sources 10 --types 3
+#    done
+#  done
+#done
+#
 #for solver in FW PGA MaxFair MaxTP
 #do
 #    for rate in 3 5 7 9 11
@@ -137,7 +306,7 @@
 #        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --solver $solver --max_datarate $rate --learners 3 --sources 3 --types 2
 #      done
 #
-#      for graph_type in erdos_renyi balanced_tree hypercube star grid_2d small_world
+#      for graph_type in grid_2d erdos_renyi balanced_tree hypercube star small_world
 #      do
 #        sbatch ../script.sh distributedSolver.py --graph_type $graph_type --solver $solver --max_datarate $rate --learners 5 --sources 10 --types 3
 #      done
