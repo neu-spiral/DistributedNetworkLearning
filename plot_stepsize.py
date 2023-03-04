@@ -13,7 +13,7 @@ Stepsizes1 = {'geant': [0.001, 0.005, 0.01, 0.05, 0.1],
               'abilene': [0.001, 0.005, 0.01, 0.05, 0.1],
               'dtelekom': [0.001, 0.005, 0.01, 0.05, 0.1]}
 
-Stepsizes2 = {'erdos_renyi': [0.001, 0.005, 0.01, 0.05],
+Stepsizes2 = {'erdos_renyi': [0.001, 0.005, 0.01, 0.05, 0.09],
               'hypercube': [0.001, 0.005, 0.01, 0.05],
               'small_world': [0.001, 0.005, 0.01, 0.02],
               'grid_2d': [0.001, 0.005, 0.01, 0.02],
@@ -30,43 +30,43 @@ def readresult(fname):
     return result
 
 
-def plotSensitivity(x1, x2, x3, graph):
-    fig, ax = plt.subplots(ncols=3)
-    fig.set_size_inches(10, 3.2)
+def plotSensitivity(x1, x3, graph):
+    fig, ax = plt.subplots(ncols=2)
+    fig.set_size_inches(6.5, 3.2)
     for i in range(len(algorithm)):
         alg = algorithm[i]
         if graph in Stepsizes1:
             ax[0].plot(Stepsizes1[graph], x1[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            ax[1].plot(Stepsizes1[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            ax[2].plot(Stepsizes1[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            # ax[1].plot(Stepsizes1[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[1].plot(Stepsizes1[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
         elif graph in Stepsizes2:
             ax[0].plot(Stepsizes2[graph], x1[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            ax[1].plot(Stepsizes2[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            ax[2].plot(Stepsizes2[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            # ax[1].plot(Stepsizes2[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[1].plot(Stepsizes2[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
 
     ax[0].tick_params(labelsize=12)
     ax[1].tick_params(labelsize=12)
-    ax[2].tick_params(labelsize=12)
+    # ax[2].tick_params(labelsize=12)
 
     ax[0].set_ylabel('Aggregate Utility', fontsize=15)
-    ax[1].set_ylabel('InFeasibility', fontsize=15)
-    ax[2].set_ylabel('Avg. Norm of Est. Error', fontsize=15)
+    # ax[1].set_ylabel('InFeasibility', fontsize=15)
+    ax[1].set_ylabel('Avg. Norm of Est. Error', fontsize=15)
 
     xlabel = 'Stepsize'
     ax[0].set_xlabel(xlabel, fontsize=15)
     ax[1].set_xlabel(xlabel, fontsize=15)
-    ax[2].set_xlabel(xlabel, fontsize=15)
+    # ax[2].set_xlabel(xlabel, fontsize=15)
 
     ax[0].set_xscale('log')
     ax[1].set_xscale('log')
-    ax[2].set_xscale('log')
+    # ax[2].set_xscale('log')
 
     lgd = fig.legend(labels=algorithm, loc='upper center', bbox_to_anchor=(0.5, 1.11), ncol=len(algorithm), fontsize=15,
                      handletextpad=0.1, columnspacing=0.6)
     plt.tight_layout()
     plt.show()
-    fig.savefig('Figure/sens_stepsize/{}.pdf'.format(graph),  bbox_extra_artists=(lgd,), bbox_inches='tight')
-    logging.info('saved in Figure/sens_stepsize/{}.pdf'.format(graph))
+    fig.savefig('Figure/sens_stepsize/{}_2.pdf'.format(graph),  bbox_extra_artists=(lgd,), bbox_inches='tight')
+    logging.info('saved in Figure/sens_stepsize/{}_2.pdf'.format(graph))
 
 
 if __name__ == '__main__':
@@ -122,4 +122,4 @@ if __name__ == '__main__':
                 result = readresult(fname)
                 obj3[algorithm[j]].append(result)
 
-    plotSensitivity(obj1, obj2, obj3, args.graph_type)
+    plotSensitivity(obj1, obj3, args.graph_type)
