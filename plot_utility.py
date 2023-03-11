@@ -46,10 +46,10 @@ def barplot(x, type):
     ax.tick_params(labelsize=12)
     if type == 'Result':
         ylabel = 'Aggregate Utility'
-    elif type == 'Time' or type == 'InFeasibility':
+    elif type == 'Time' or type == 'Infeasibility':
         ylabel = type
     elif type == 'beta':
-        ylabel = 'Avg. Norm of Est. Error'
+        ylabel = 'Estimation Error'
     ax.set_ylabel(ylabel, fontsize=13)
 
     ax.set_xticks(ind + width * (len(algorithm)-1) / 2)
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--debug_level', default='DEBUG', type=str, help='Debug Level',
                         choices=['INFO', 'DEBUG', 'WARNING', 'ERROR'])
     parser.add_argument('--type', default='Result', type=str, help='Plot est. error or utility',
-                        choices=['beta', 'Result', 'Time', 'InFeasibility'])
+                        choices=['beta', 'Result', 'Time', 'Infeasibility'])
     args = parser.parse_args()
 
     args.debug_level = eval("logging." + args.debug_level)
@@ -83,6 +83,11 @@ if __name__ == '__main__':
                     algorithm[j], topology1[i], Stepsizes1[j])
                 result = readresult(fname)
                 obj[algorithm[j]][topology1[i]] = result
+            elif args.type == 'Infeasibility':
+                fname = 'Result_{}/Infeasibility_{}_3learners_3sources_2types_{}stepsize'.format(
+                    algorithm[j], topology1[i], Stepsizes1[j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology1[i]] = result
             else:
                 fname = 'Result_{}/Result_{}_3learners_3sources_2types_{}stepsize'.format(
                     algorithm[j], topology1[i], Stepsizes1[j])
@@ -91,13 +96,18 @@ if __name__ == '__main__':
                     obj[algorithm[j]][topology1[i]] = result[2]
                 elif args.type == 'Time':
                     obj[algorithm[j]][topology1[i]] = result[0]
-                elif args.type == 'InFeasibility':
-                    obj[algorithm[j]][topology1[i]] = result[3][-1]
+                # elif args.type == 'Infeasibility':
+                #     obj[algorithm[j]][topology1[i]] = result[3][-1]
 
     for top in topology2:
         for j in range(len(algorithm)):
             if args.type == 'beta':
                 fname = 'Result_{}/beta_{}_5learners_10sources_3types_{}stepsize'.format(
+                    algorithm[j], top, Stepsizes2[top][j])
+                result = readresult(fname)
+                obj[algorithm[j]][topology2[top]] = result
+            elif args.type == 'Infeasibility':
+                fname = 'Result_{}/Infeasibility_{}_5learners_10sources_3types_{}stepsize'.format(
                     algorithm[j], top, Stepsizes2[top][j])
                 result = readresult(fname)
                 obj[algorithm[j]][topology2[top]] = result
@@ -109,7 +119,7 @@ if __name__ == '__main__':
                     obj[algorithm[j]][topology2[top]] = result[2]
                 elif args.type == 'Time':
                     obj[algorithm[j]][topology2[top]] = result[0]
-                elif args.type == 'InFeasibility':
-                    obj[algorithm[j]][topology2[top]] = result[3][-1]
+                # elif args.type == 'Infeasibility':
+                #     obj[algorithm[j]][topology2[top]] = result[3][-1]
 
     barplot(obj, args.type)

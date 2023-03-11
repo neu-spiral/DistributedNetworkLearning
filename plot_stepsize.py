@@ -30,43 +30,43 @@ def readresult(fname):
     return result
 
 
-def plotSensitivity(x1, x3, graph):
-    fig, ax = plt.subplots(ncols=2)
-    fig.set_size_inches(6.5, 3.2)
+def plotSensitivity(x1, x2, x3, graph):
+    fig, ax = plt.subplots(ncols=3)
+    fig.set_size_inches(10, 3.2)
     for i in range(len(algorithm)):
         alg = algorithm[i]
         if graph in Stepsizes1:
             ax[0].plot(Stepsizes1[graph], x1[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            # ax[1].plot(Stepsizes1[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            ax[1].plot(Stepsizes1[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[1].plot(Stepsizes1[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[2].plot(Stepsizes1[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
         elif graph in Stepsizes2:
             ax[0].plot(Stepsizes2[graph], x1[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            # ax[1].plot(Stepsizes2[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
-            ax[1].plot(Stepsizes2[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[1].plot(Stepsizes2[graph], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[2].plot(Stepsizes2[graph], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
 
     ax[0].tick_params(labelsize=12)
     ax[1].tick_params(labelsize=12)
-    # ax[2].tick_params(labelsize=12)
+    ax[2].tick_params(labelsize=12)
 
     ax[0].set_ylabel('Aggregate Utility', fontsize=15)
-    # ax[1].set_ylabel('InFeasibility', fontsize=15)
-    ax[1].set_ylabel('Avg. Norm of Est. Error', fontsize=15)
+    ax[1].set_ylabel('Infeasibility', fontsize=15)
+    ax[2].set_ylabel('Estimation Error', fontsize=15)
 
     xlabel = 'Stepsize'
     ax[0].set_xlabel(xlabel, fontsize=15)
     ax[1].set_xlabel(xlabel, fontsize=15)
-    # ax[2].set_xlabel(xlabel, fontsize=15)
+    ax[2].set_xlabel(xlabel, fontsize=15)
 
     ax[0].set_xscale('log')
     ax[1].set_xscale('log')
-    # ax[2].set_xscale('log')
+    ax[2].set_xscale('log')
 
     lgd = fig.legend(labels=algorithm, loc='upper center', bbox_to_anchor=(0.5, 1.11), ncol=len(algorithm), fontsize=15,
                      handletextpad=0.1, columnspacing=0.6)
     plt.tight_layout()
     plt.show()
-    fig.savefig('Figure/sens_stepsize/{}_2.pdf'.format(graph),  bbox_extra_artists=(lgd,), bbox_inches='tight')
-    logging.info('saved in Figure/sens_stepsize/{}_2.pdf'.format(graph))
+    fig.savefig('Figure/sens_stepsize/{}.pdf'.format(graph),  bbox_extra_artists=(lgd,), bbox_inches='tight')
+    logging.info('saved in Figure/sens_stepsize/{}.pdf'.format(graph))
 
 
 if __name__ == '__main__':
@@ -87,17 +87,21 @@ if __name__ == '__main__':
     args.debug_level = eval("logging." + args.debug_level)
     logging.basicConfig(level=args.debug_level)
 
-    obj1, obj2, obj3 = {}, {}, {}
+    obj1, obj2, obj3 = {}, {}, {}  # utility, infeasibility, beta
     if args.graph_type in Stepsizes1:
         for j in range(len(algorithm)):
             obj1[algorithm[j]] = []
-            obj2[algorithm[j]] = []
             for Ss in Stepsizes1[args.graph_type]:
                 fname = "Result_{}/Result_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
                         args.graph_type, Ss)
                 result = readresult(fname)
                 obj1[algorithm[j]].append(result[2])
-                obj2[algorithm[j]].append(result[3][-1])
+            obj2[algorithm[j]] = []
+            for Ss in Stepsizes1[args.graph_type]:
+                fname = "Result_{}/Infeasibility_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
+                        args.graph_type, Ss)
+                result = readresult(fname)
+                obj2[algorithm[j]].append(result)
             obj3[algorithm[j]] = []
             for Ss in Stepsizes1[args.graph_type]:
                 fname = "Result_{}/beta_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
@@ -108,13 +112,17 @@ if __name__ == '__main__':
     elif args.graph_type in Stepsizes2:
         for j in range(len(algorithm)):
             obj1[algorithm[j]] = []
-            obj2[algorithm[j]] = []
             for Ss in Stepsizes2[args.graph_type]:
                 fname = "Result_{}/Result_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
                         args.graph_type, Ss)
                 result = readresult(fname)
                 obj1[algorithm[j]].append(result[2])
-                obj2[algorithm[j]].append(result[3][-1])
+            obj2[algorithm[j]] = []
+            for Ss in Stepsizes2[args.graph_type]:
+                fname = "Result_{}/Infeasibility_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
+                        args.graph_type, Ss)
+                result = readresult(fname)
+                obj2[algorithm[j]].append(result[2])
             obj3[algorithm[j]] = []
             for Ss in Stepsizes2[args.graph_type]:
                 fname = "Result_{}/beta_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
@@ -122,4 +130,4 @@ if __name__ == '__main__':
                 result = readresult(fname)
                 obj3[algorithm[j]].append(result)
 
-    plotSensitivity(obj1, obj3, args.graph_type)
+    plotSensitivity(obj1, obj2, obj3, args.graph_type)

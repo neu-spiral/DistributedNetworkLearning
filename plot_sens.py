@@ -60,18 +60,24 @@ def plotSensitivity(x1, x2, x3, change, graph):
             ax[0].plot(coefficients1[change], x1[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
             ax[1].plot(coefficients1[change], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
             ax[2].plot(coefficients1[change], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[0].set_xticks(coefficients1[change])
+            ax[1].set_xticks(coefficients1[change])
+            ax[2].set_xticks(coefficients1[change])
         elif graph in Stepsizes2:
             ax[0].plot(coefficients2[change], x1[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
             ax[1].plot(coefficients2[change], x2[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
             ax[2].plot(coefficients2[change], x3[alg], line_styles[i], markersize=10, color=colors[i], label=alg, linewidth=3)
+            ax[0].set_xticks(coefficients2[change])
+            ax[1].set_xticks(coefficients2[change])
+            ax[2].set_xticks(coefficients2[change])
 
     ax[0].tick_params(labelsize=12)
     ax[1].tick_params(labelsize=12)
     ax[2].tick_params(labelsize=12)
 
     ax[0].set_ylabel('Aggregate Utility', fontsize=15)
-    ax[1].set_ylabel('InFeasibility', fontsize=15)
-    ax[2].set_ylabel('Avg. Norm of Est. Error', fontsize=15)
+    ax[1].set_ylabel('Infeasibility', fontsize=15)
+    ax[2].set_ylabel('Estimation Error', fontsize=15)
 
     if change == 'source':
         xlabel = '|S|'
@@ -115,13 +121,17 @@ if __name__ == '__main__':
         if args.change == 'learner':
             for j in range(len(algorithm)):
                 obj1[algorithm[j]] = []
-                obj2[algorithm[j]] = []
                 for i in range(len(coefficients1[args.change])):
                     fname = "Result_{}/Result_{}_{}learners_3sources_2types_{}stepsize".format(algorithm[j],
                             args.graph_type, coefficients1[args.change][i], Stepsizes1[args.graph_type][args.change][j])
                     result = readresult(fname)
                     obj1[algorithm[j]].append(result[2])
-                    obj2[algorithm[j]].append(result[3][-1])
+                obj2[algorithm[j]] = []
+                for i in range(len(coefficients1[args.change])):
+                    fname = "Result_{}/Infeasibility_{}_{}learners_3sources_2types_{}stepsize".format(algorithm[j],
+                            args.graph_type, coefficients1[args.change][i], Stepsizes1[args.graph_type][args.change][j])
+                    result = readresult(fname)
+                    obj2[algorithm[j]].append(result)
                 obj3[algorithm[j]] = []
                 for i in range(len(coefficients1[args.change])):
                     fname = "Result_{}/beta_{}_{}learners_3sources_2types_{}stepsize".format(algorithm[j],
@@ -131,13 +141,17 @@ if __name__ == '__main__':
         elif args.change == 'source':
             for j in range(len(algorithm)):
                 obj1[algorithm[j]] = []
-                obj2[algorithm[j]] = []
                 for i in range(len(coefficients1[args.change])):
                     fname = "Result_{}/Result_{}_3learners_{}sources_2types_{}stepsize".format(algorithm[j],
                             args.graph_type, coefficients1[args.change][i], Stepsizes1[args.graph_type][args.change][j])
                     result = readresult(fname)
                     obj1[algorithm[j]].append(result[2])
-                    obj2[algorithm[j]].append(result[3][-1])
+                obj2[algorithm[j]] = []
+                for i in range(len(coefficients1[args.change])):
+                    fname = "Result_{}/Infeasibility_{}_3learners_{}sources_2types_{}stepsize".format(algorithm[j],
+                            args.graph_type, coefficients1[args.change][i], Stepsizes1[args.graph_type][args.change][j])
+                    result = readresult(fname)
+                    obj2[algorithm[j]].append(result)
                 obj3[algorithm[j]] = []
                 for i in range(len(coefficients1[args.change])):
                     fname = "Result_{}/beta_{}_3learners_{}sources_2types_{}stepsize".format(algorithm[j],
@@ -147,13 +161,17 @@ if __name__ == '__main__':
         elif args.change == 'rate':
             for j in range(len(algorithm)):
                 obj1[algorithm[j]] = []
-                obj2[algorithm[j]] = []
                 for i in range(len(coefficients1[args.change])):
                     fname = "Result_rate_{}/Result_{}_3learners_3sources_2types_{}rate_{}stepsize".format(algorithm[j],
                             args.graph_type, coefficients1[args.change][i], Stepsizes1[args.graph_type][args.change][j])
                     result = readresult(fname)
                     obj1[algorithm[j]].append(result[2])
-                    obj2[algorithm[j]].append(result[3][-1])
+                obj2[algorithm[j]] = []
+                for i in range(len(coefficients1[args.change])):
+                    fname = "Result_rate_{}/Infeasibility_{}_3learners_3sources_2types_{}rate_{}stepsize".format(algorithm[j],
+                            args.graph_type, coefficients1[args.change][i], Stepsizes1[args.graph_type][args.change][j])
+                    result = readresult(fname)
+                    obj2[algorithm[j]].append(result)
                 obj3[algorithm[j]] = []
                 for i in range(len(coefficients1[args.change])):
                     fname = "Result_rate_{}/beta_{}_3learners_3sources_2types_{}rate_{}stepsize".format(algorithm[j],
@@ -165,13 +183,17 @@ if __name__ == '__main__':
         if args.change == 'learner':
             for j in range(len(algorithm)):
                 obj1[algorithm[j]] = []
-                obj2[algorithm[j]] = []
                 for i in range(len(coefficients2[args.change])):
                     fname = "Result_{}/Result_{}_{}learners_10sources_3types_{}stepsize".format(algorithm[j],
                             args.graph_type, coefficients2[args.change][i], Stepsizes2[args.graph_type][args.change][j])
                     result = readresult(fname)
                     obj1[algorithm[j]].append(result[2])
-                    obj2[algorithm[j]].append(result[3][-1])
+                obj2[algorithm[j]] = []
+                for i in range(len(coefficients2[args.change])):
+                    fname = "Result_{}/Infeasibility_{}_{}learners_10sources_3types_{}stepsize".format(algorithm[j],
+                            args.graph_type, coefficients2[args.change][i], Stepsizes2[args.graph_type][args.change][j])
+                    result = readresult(fname)
+                    obj2[algorithm[j]].append(result)
                 obj3[algorithm[j]] = []
                 for i in range(len(coefficients2[args.change])):
                     fname = "Result_{}/beta_{}_{}learners_10sources_3types_{}stepsize".format(algorithm[j],
@@ -181,13 +203,17 @@ if __name__ == '__main__':
         elif args.change == 'source':
             for j in range(len(algorithm)):
                 obj1[algorithm[j]] = []
-                obj2[algorithm[j]] = []
                 for i in range(len(coefficients2[args.change])):
                     fname = "Result_{}/Result_{}_5learners_{}sources_3types_{}stepsize".format(algorithm[j],
                             args.graph_type, coefficients2[args.change][i], Stepsizes2[args.graph_type][args.change][j])
                     result = readresult(fname)
                     obj1[algorithm[j]].append(result[2])
-                    obj2[algorithm[j]].append(result[3][-1])
+                obj2[algorithm[j]] = []
+                for i in range(len(coefficients2[args.change])):
+                    fname = "Result_{}/Infeasibility_{}_5learners_{}sources_3types_{}stepsize".format(algorithm[j],
+                            args.graph_type, coefficients2[args.change][i], Stepsizes2[args.graph_type][args.change][j])
+                    result = readresult(fname)
+                    obj2[algorithm[j]].append(result)
                 obj3[algorithm[j]] = []
                 for i in range(len(coefficients2[args.change])):
                     fname = "Result_{}/beta_{}_5learners_{}sources_3types_{}stepsize".format(algorithm[j],
@@ -197,13 +223,17 @@ if __name__ == '__main__':
         elif args.change == 'rate':
             for j in range(len(algorithm)):
                 obj1[algorithm[j]] = []
-                obj2[algorithm[j]] = []
                 for i in range(len(coefficients2[args.change])):
                     fname = "Result_rate_{}/Result_{}_5learners_10sources_3types_{}rate_{}stepsize".format(algorithm[j],
                             args.graph_type, coefficients2[args.change][i], Stepsizes2[args.graph_type][args.change][j])
                     result = readresult(fname)
                     obj1[algorithm[j]].append(result[2])
-                    obj2[algorithm[j]].append(result[3][-1])
+                obj2[algorithm[j]] = []
+                for i in range(len(coefficients2[args.change])):
+                    fname = "Result_rate_{}/Infeasibility_{}_5learners_10sources_3types_{}rate_{}stepsize".format(algorithm[j],
+                            args.graph_type, coefficients1[args.change][i], Stepsizes2[args.graph_type][args.change][j])
+                    result = readresult(fname)
+                    obj2[algorithm[j]].append(result)
                 obj3[algorithm[j]] = []
                 for i in range(len(coefficients2[args.change])):
                     fname = "Result_rate_{}/beta_{}_5learners_10sources_3types_{}rate_{}stepsize".format(algorithm[j],

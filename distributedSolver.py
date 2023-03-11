@@ -99,6 +99,7 @@ class Learning:
 
     def feasibility(self, Y, tol=1e-3):
         feasibility = 0
+        number = 0
         for (s, t) in self.paths:
             for p in range(len(self.paths[(s, t)])):
                 if Y[(s, t)][p] < -tol:
@@ -107,6 +108,7 @@ class Learning:
                                                                                                      p].learner,
                                                                                                  Y[(s, t)][p]))
                     feasibility += - Y[(s, t)][p]
+                number += 1
 
         for e in self.dependencies:
             temp = 0
@@ -118,6 +120,7 @@ class Learning:
             if temp - self.bandwidth[e] > tol:
                 logging.debug("Edge {} with bandwidth {} has flow {}".format(e, self.bandwidth[e], temp))
                 feasibility += temp - self.bandwidth[e]
+            number += 1
 
         for (s, t) in self.paths:
             temp = 0
@@ -127,8 +130,9 @@ class Learning:
                 logging.debug("Source {}, type {} with rate {} has flow {}".format(s, t, self.sourceRates[(s, t)],
                                                                                    temp))
                 feasibility += temp - self.sourceRates[(s, t)]
+            number += 1
 
-        return feasibility
+        return feasibility / number
 
 
 class Gradient(Learning):
@@ -880,80 +884,92 @@ if __name__ == '__main__':
     with open(fname, 'rb') as f:
         P = pickle.load(f)
 
-    if args.solver == 'DFW':
-        alg = FrankWolf(P)
-        t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
-
-    if args.solver == 'FW':
-        alg = FrankWolf(P)
-        t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
-
-    if args.solver == 'DPGA':
-        alg = ProjectAscent(P)
-        t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
-
-    if args.solver == 'PGA':
-        alg = ProjectAscent(P)
-        t1 = time.time()
-        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
-
-    if args.solver == 'DMaxTP':
-        alg = MaxTP(P)
-        t1 = time.time()
-        Y, feasibilities = alg.distributedAlg(iterations=1000, stepsize=args.stepsize)
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
-
-    if args.solver == 'MaxTP':
-        alg = MaxTP(P)
-        t1 = time.time()
-        Y, feasibilities = alg.centralAlg()
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
-
-    if args.solver == 'DMaxFair':
-        alg = MaxFair(P)
-        t1 = time.time()
-        Y, feasibilities = alg.distributedAlg(alpha=2, iterations=1000, stepsize=args.stepsize)
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
-
-    if args.solver == 'MaxFair':
-        alg = MaxFair(P)
-        t1 = time.time()
-        Y, feasibilities = alg.centralAlg(alpha=2)
-        t2 = time.time()
-        obj = alg.objU(Y=Y, N1=100, N2=100)
-        period = t2 - t1
-        print(t2 - t1, Y, obj, feasibilities[-1])
+    # if args.solver == 'DFW':
+    #     alg = FrankWolf(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    #
+    # if args.solver == 'FW':
+    #     alg = FrankWolf(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    #
+    # if args.solver == 'DPGA':
+    #     alg = ProjectAscent(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    #
+    # if args.solver == 'PGA':
+    #     alg = ProjectAscent(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    #
+    # if args.solver == 'DMaxTP':
+    #     alg = MaxTP(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.distributedAlg(iterations=1000, stepsize=args.stepsize)
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    #
+    # if args.solver == 'MaxTP':
+    #     alg = MaxTP(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.centralAlg()
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    #
+    # if args.solver == 'DMaxFair':
+    #     alg = MaxFair(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.distributedAlg(alpha=2, iterations=1000, stepsize=args.stepsize)
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    #
+    # if args.solver == 'MaxFair':
+    #     alg = MaxFair(P)
+    #     t1 = time.time()
+    #     Y, feasibilities = alg.centralAlg(alpha=2)
+    #     t2 = time.time()
+    #     obj = alg.objU(Y=Y, N1=100, N2=100)
+    #     period = t2 - t1
+    #     print(t2 - t1, Y, obj, feasibilities[-1])
 
     fname = 'Result_{}/Result_{}_{}learners_{}sources_{}types_{}stepsize'.format(
         args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
+    # logging.info('Save in ' + fname)
+    # with open(fname, 'wb') as f:
+    #     pickle.dump((period, Y, obj, feasibilities), f)
+
+    with open(fname, 'rb') as f:
+        result = pickle.load(f)
+
+    alg = Learning(P)
+    Y = result[1]
+    feasibility = alg.feasibility(Y)
+    fname = 'Result_{}/Infeasibility_{}_{}learners_{}sources_{}types_{}stepsize'.format(
+        args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
-        pickle.dump((period, Y, obj, feasibilities), f)
+        pickle.dump(feasibility, f)
