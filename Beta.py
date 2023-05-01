@@ -17,6 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('--sources', default=3, type=int, help='Number of nodes generating data')
     parser.add_argument('--solver', type=str, help='solver type',
                         choices=['DFW', 'FW', 'DPGA', 'PGA', 'DMaxFair', 'MaxFair', 'DMaxTP', 'MaxTP'])
+    parser.add_argument('--max_datarate', default=8, type=float, help="Maximum data rate of each sources")
     parser.add_argument('--stepsize', default=0.01, type=float, help="stepsize for FW")
 
     parser.add_argument('--random_seed', default=19930101, type=int, help='Random seed')
@@ -28,13 +29,13 @@ if __name__ == '__main__':
     args.debug_level = eval("logging." + args.debug_level)
     logging.basicConfig(level=args.debug_level)
 
-    fname = 'Result_{}/Result_{}_{}learners_{}sources_{}types_{}stepsize'.format(
+    fname = 'Result_15_{}/Result_{}_{}learners_{}sources_{}types_{}stepsize'.format(
         args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
     logging.info('Read data from ' + fname)
     with open(fname, 'rb') as f:
         results = pickle.load(f)
 
-    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
+    fname = 'Problem_15/Problem_{}_{}learners_{}sources_{}types'.format(
         args.graph_type, args.learners, args.sources, args.types)
     logging.info('Read data from ' + fname)
     with open(fname, 'rb') as f:
@@ -84,13 +85,13 @@ if __name__ == '__main__':
                     # norm_temp = np.linalg.norm(map_l - beta)
                     # if norm_temp < 1:
                     #     print(norm_temp)
-                    norm += np.linalg.norm(map_l - beta)
+                    norm += np.linalg.norm(map_l - beta) / np.linalg.norm(beta)
         norm = norm / N1 / N2 / N3
         logging.debug(norm)
         dist += norm
     distance = dist / len(learners)
     print(distance)
-    fname = 'Result_{}/beta_{}_{}learners_{}sources_{}types_{}stepsize'.format(
+    fname = 'Result_15_{}/beta_{}_{}learners_{}sources_{}types_{}stepsize'.format(
         args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:

@@ -10,14 +10,14 @@ matplotlib.rcParams['ps.fonttype'] = 42
 algorithm = ['DFW', 'DPGA', 'DMaxTP', 'DMaxFair']
 
 Stepsizes1 = {'geant': [0.001, 0.005, 0.01, 0.05, 0.1],
-              'abilene': [0.001, 0.005, 0.01, 0.05, 0.1],
-              'dtelekom': [0.001, 0.005, 0.01, 0.05, 0.1]}
+              'abilene': [0.001, 0.005, 0.01, 0.05, 0.1, 0.4],
+              'dtelekom': [0.001, 0.005, 0.01, 0.05, 0.1, 0.4]}
 
-Stepsizes2 = {'erdos_renyi': [0.001, 0.005, 0.01, 0.05, 0.09],
-              'hypercube': [0.001, 0.005, 0.01, 0.05],
-              'small_world': [0.001, 0.005, 0.01, 0.02],
+Stepsizes2 = {'erdos_renyi': [0.001, 0.005, 0.01, 0.03],
+              'hypercube': [0.001, 0.005, 0.01, 0.02],
+              'small_world': [0.001, 0.005, 0.01, 0.05],
               'grid_2d': [0.001, 0.005, 0.01, 0.02],
-              'balanced_tree': [0.001, 0.005, 0.01, 0.02],
+              'balanced_tree': [0.001, 0.005, 0.01],
               'star': [0.001, 0.005, 0.01]}
 
 colors = ['r', 'gold', 'mediumturquoise', 'blueviolet']
@@ -65,8 +65,8 @@ def plotSensitivity(x1, x2, x3, graph):
                      handletextpad=0.1, columnspacing=0.6)
     plt.tight_layout()
     plt.show()
-    fig.savefig('Figure/sens_stepsize/{}.pdf'.format(graph),  bbox_extra_artists=(lgd,), bbox_inches='tight')
-    logging.info('saved in Figure/sens_stepsize/{}.pdf'.format(graph))
+    fig.savefig('Figure_15/sens_stepsize/{}.pdf'.format(graph),  bbox_extra_artists=(lgd,), bbox_inches='tight')
+    logging.info('saved in Figure_15/sens_stepsize/{}.pdf'.format(graph))
 
 
 if __name__ == '__main__':
@@ -91,20 +91,16 @@ if __name__ == '__main__':
     if args.graph_type in Stepsizes1:
         for j in range(len(algorithm)):
             obj1[algorithm[j]] = []
+            obj2[algorithm[j]] = []
             for Ss in Stepsizes1[args.graph_type]:
-                fname = "Result_{}/Result_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
+                fname = "Result_15_{}/Result_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
                         args.graph_type, Ss)
                 result = readresult(fname)
                 obj1[algorithm[j]].append(result[2])
-            obj2[algorithm[j]] = []
-            for Ss in Stepsizes1[args.graph_type]:
-                fname = "Result_{}/Infeasibility_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
-                        args.graph_type, Ss)
-                result = readresult(fname)
-                obj2[algorithm[j]].append(result)
+                obj2[algorithm[j]].append(result[3][-1])
             obj3[algorithm[j]] = []
             for Ss in Stepsizes1[args.graph_type]:
-                fname = "Result_{}/beta_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
+                fname = "Result_15_{}/beta_{}_3learners_3sources_2types_{}stepsize".format(algorithm[j],
                         args.graph_type, Ss)
                 result = readresult(fname)
                 obj3[algorithm[j]].append(result)
@@ -112,20 +108,16 @@ if __name__ == '__main__':
     elif args.graph_type in Stepsizes2:
         for j in range(len(algorithm)):
             obj1[algorithm[j]] = []
+            obj2[algorithm[j]] = []
             for Ss in Stepsizes2[args.graph_type]:
-                fname = "Result_{}/Result_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
+                fname = "Result_15_{}/Result_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
                         args.graph_type, Ss)
                 result = readresult(fname)
                 obj1[algorithm[j]].append(result[2])
-            obj2[algorithm[j]] = []
-            for Ss in Stepsizes2[args.graph_type]:
-                fname = "Result_{}/Infeasibility_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
-                        args.graph_type, Ss)
-                result = readresult(fname)
-                obj2[algorithm[j]].append(result[2])
+                obj2[algorithm[j]].append(result[3][-1])
             obj3[algorithm[j]] = []
             for Ss in Stepsizes2[args.graph_type]:
-                fname = "Result_{}/beta_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
+                fname = "Result_15_{}/beta_{}_5learners_10sources_3types_{}stepsize".format(algorithm[j],
                         args.graph_type, Ss)
                 result = readresult(fname)
                 obj3[algorithm[j]].append(result)

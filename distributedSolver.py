@@ -123,9 +123,7 @@ class Learning:
             number += 1
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += Y[(s, t)][p]
+            temp = max(Y[(s, t)].values())
             if temp - self.sourceRates[(s, t)] > tol:
                 logging.debug("Source {}, type {} with rate {} has flow {}".format(s, t, self.sourceRates[(s, t)],
                                                                                    temp))
@@ -199,16 +197,14 @@ class FrankWolf(Gradient):
             for (s, t) in self.dependencies[e]:
                 temp_st = 0
                 for p in self.dependencies[e][(s, t)]:
-                    temp_st += pow(D[(s, t)][p], n)
-                temp += pow(temp_st, 1. / n)
+                    temp_st = max(D[(s, t)][p], temp_st)
+                temp += temp_st
             temp -= self.bandwidth[e]
             temp = np.expm1(temp)
             L -= Q[e] * temp
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
+            temp = max(D[(s, t)].values())
             temp -= self.sourceRates[(s, t)]
             temp = np.expm1(temp)
             L -= R[(s, t)] * temp
@@ -246,51 +242,54 @@ class FrankWolf(Gradient):
 
         for i in range(iterations):
             temp_Q = {}
+            temp_QST = {}
             for e in self.dependencies:
                 Q_new[e] = Q_old[e]
-                temp = 0
+                temp_Q[e] = 0
+                temp_QST[e] = {}
                 for (s, t) in self.dependencies[e]:
-                    temp_st = 0
+                    temp_QST[e][(s, t)] = 0
                     for p in self.dependencies[e][(s, t)]:
-                        temp_st += pow(D_old[(s, t)][p], n)
-                    temp += pow(temp_st, 1. / n)
-                temp -= self.bandwidth[e]
-                temp_Q[e] = temp
-                temp = np.expm1(temp)
-                Q_new[e] += stepsize * self.plus(Q_old[e], temp)
+                        temp_QST[e][(s, t)] += pow(D_old[(s, t)][p], n)
+                    temp_Q[e] += pow(temp_QST[e][(s, t)], 1. / n)
+                temp_Q[e] -= self.bandwidth[e]
+                Q_new[e] += stepsize * self.plus(Q_old[e], np.expm1(temp_Q[e]))
 
             temp_R = {}
+            temp_RST = {}
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
-                temp = 0
+                temp_RST[(s, t)] = 0
                 for p in range(len(self.paths[(s, t)])):
-                    temp += D_old[(s, t)][p]
-                temp -= self.sourceRates[(s, t)]
-                temp_R[(s, t)] = temp
-                temp = np.expm1(temp)
-                R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
+                    temp_RST[(s, t)] += pow(D_old[(s, t)][p], n)
+                temp_R[(s, t)] = pow(temp_RST[(s, t)], 1. / n)
+                temp_R[(s, t)] -= self.sourceRates[(s, t)]
+                R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], np.expm1(temp_R[(s, t)]))
 
             for (s, t) in self.paths:
                 for p in range(len(self.paths[(s, t)])):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
                                                                                np.expm1(-D_old[(s, t)][p]))
 
-                    temp = 0
                     path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
-                        temp_e = 0
-                        for p_e in self.dependencies[edge][(s, t)]:
-                            temp_e += pow(D_old[(s, t)][p_e], n)
+                        temp_e = temp_QST[edge][(s, t)]
                         if temp_e:
-                            temp += Q_old[edge] * np.exp(temp_Q[edge]) * pow(temp_e, 1. / n - 1)
+                            temp_q = Q_old[edge] * np.exp(temp_Q[edge]) * pow(temp_e, 1. / n - 1) * \
+                                     pow(D_old[(s, t)][p], n - 1)
                         else:
-                            temp += Q_old[edge] * np.exp(temp_Q[edge])
-                    temp *= pow(D_old[(s, t)][p], n - 1)
+                            temp_q = 0
+
+                    temp_st = temp_RST[(s, t)]
+                    if temp_st:
+                        temp_r = R_old[(s, t)] * np.exp(temp_R[(s, t)]) * pow(temp_st, 1. / n - 1) * \
+                                 pow(D_old[(s, t)][p], n - 1)
+                    else:
+                        temp_r = 0
 
                     D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
-                            Z[(s, t)][p] - temp - R_old[(s, t)] * np.exp(temp_R[(s, t)])
-                            + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
+                            Z[(s, t)][p] - temp_q - temp_r + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -321,9 +320,11 @@ class FrankWolf(Gradient):
             constr.append(temp <= self.bandwidth[e])
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
+            st_size = len(self.paths[(s, t)])
+            temp_st = cp.Variable(st_size)
+            for p in range(st_size):
+                constr.append(temp_st[p] == D[(s, t)][p])
+            temp = cp.max(temp_st)
             constr.append(temp <= self.sourceRates[(s, t)])
 
         obj = 0
@@ -373,7 +374,7 @@ class ProjectAscent(Gradient):
         L = 0
         for (s, t) in self.paths:
             for p in range(len(self.paths[(s, t)])):
-                L -= (D[(s, t)][p] - Z[(s, t)][p]) ** 2
+                L += (D[(s, t)][p] - Z[(s, t)][p]) ** 2
 
         for e in self.dependencies:
             temp = 0
@@ -383,18 +384,16 @@ class ProjectAscent(Gradient):
                     temp_st += pow(D[(s, t)][p], n)
                 temp += pow(temp_st, 1. / n)
             temp -= self.bandwidth[e]
-            L -= Q[e] * temp
+            L += Q[e] * temp
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
+            temp = max(D[(s, t)].values())
             temp -= self.sourceRates[(s, t)]
-            L -= R[(s, t)] * temp
+            L += R[(s, t)] * temp
 
         for (s, t) in self.paths:
             for p in range(len(self.paths[(s, t)])):
-                L += U[(s, t)][p] * U[(s, t)][p]
+                L -= U[(s, t)][p] * D[(s, t)][p]
         return L
 
     def project_distributed(self, Y, iterations, stepsize):
@@ -423,22 +422,26 @@ class ProjectAscent(Gradient):
                 D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0
 
         for i in range(iterations):
+            temp_QST = {}
             for e in self.dependencies:
                 Q_new[e] = Q_old[e]
                 temp = 0
+                temp_QST[e] = {}
                 for (s, t) in self.dependencies[e]:
-                    temp_st = 0
+                    temp_QST[e][(s, t)] = 0
                     for p in self.dependencies[e][(s, t)]:
-                        temp_st += pow(D_old[(s, t)][p], n)
-                    temp += pow(temp_st, 1. / n)
+                        temp_QST[e][(s, t)] += pow(D_old[(s, t)][p], n)
+                    temp += pow(temp_QST[e][(s, t)], 1. / n)
                 temp -= self.bandwidth[e]
                 Q_new[e] += stepsize * self.plus(Q_old[e], temp)
 
+            temp_RST = {}
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
-                temp = 0
+                temp_RST[(s, t)] = 0
                 for p in range(len(self.paths[(s, t)])):
-                    temp += D_old[(s, t)][p]
+                    temp_RST[(s, t)] += pow(D_old[(s, t)][p], n)
+                temp = pow(temp_RST[(s, t)], 1. / n)
                 temp -= self.sourceRates[(s, t)]
                 R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
 
@@ -447,22 +450,23 @@ class ProjectAscent(Gradient):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
                                                                                -D_old[(s, t)][p])
 
-                    temp = 0
                     path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
-                        temp_e = 0
-                        for p_e in self.dependencies[edge][(s, t)]:
-                            temp_e += pow(D_old[(s, t)][p_e], n)
+                        temp_e = temp_QST[edge][(s, t)]
                         if temp_e:
-                            temp += Q_old[edge] * pow(temp_e, 1. / n - 1)
+                            temp_q = Q_old[edge] * pow(temp_e, 1. / n - 1) * pow(D_old[(s, t)][p], n - 1)
                         else:
-                            temp += Q_old[edge]
-                    temp *= pow(D_old[(s, t)][p], n - 1)
+                            temp_q = 0
+
+                    temp_st = temp_RST[(s, t)]
+                    if temp_st:
+                        temp_r = R_old[(s, t)] * pow(temp_st, 1. / n - 1) * pow(D_old[(s, t)][p], n - 1)
+                    else:
+                        temp_r = 0
 
                     D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
-                            -2 * (D_old[(s, t)][p] - Y[(s, t)][p]) - temp -
-                            R_old[(s, t)] + U_old[(s, t)][p])
+                            -2 * (D_old[(s, t)][p] - Y[(s, t)][p]) - temp_q - temp_r + U_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -493,9 +497,11 @@ class ProjectAscent(Gradient):
             constr.append(temp <= self.bandwidth[e])
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
+            st_size = len(self.paths[(s, t)])
+            temp_st = cp.Variable(st_size)
+            for p in range(st_size):
+                constr.append(temp_st[p] == D[(s, t)][p])
+            temp = cp.max(temp_st)
             constr.append(temp <= self.sourceRates[(s, t)])
 
         obj = 0
@@ -540,6 +546,34 @@ class ProjectAscent(Gradient):
 
 
 class MaxTP(Learning):
+    def Lagrangian(self, D, Q, R, U, n):
+        L = 0
+        for (s, t) in self.paths:
+            for p in range(len(self.paths[(s, t)])):
+                L += D[(s, t)][p]
+
+        for e in self.dependencies:
+            temp = 0
+            for (s, t) in self.dependencies[e]:
+                temp_st = 0
+                for p in self.dependencies[e][(s, t)]:
+                    temp_st += pow(D[(s, t)][p], n)
+                temp += pow(temp_st, 1. / n)
+            temp -= self.bandwidth[e]
+            temp = np.expm1(temp)
+            L -= Q[e] * temp
+
+        for (s, t) in self.paths:
+            temp = max(D[(s, t)].values())
+            temp -= self.sourceRates[(s, t)]
+            temp = np.expm1(temp)
+            L -= R[(s, t)] * temp
+
+        for (s, t) in self.paths:
+            for p in range(len(self.paths[(s, t)])):
+                L -= U[(s, t)][p] * np.expm1(-D[(s, t)][p])
+        return L
+
     def centralAlg(self):
         constr = []
 
@@ -563,9 +597,11 @@ class MaxTP(Learning):
             constr.append(temp <= self.bandwidth[e])
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
+            st_size = len(self.paths[(s, t)])
+            temp_st = cp.Variable(st_size)
+            for p in range(st_size):
+                constr.append(temp_st[p] == D[(s, t)][p])
+            temp = cp.max(temp_st)
             constr.append(temp <= self.sourceRates[(s, t)])
 
         obj = 0
@@ -607,51 +643,54 @@ class MaxTP(Learning):
 
         for i in range(iterations):
             temp_Q = {}
+            temp_QST = {}
             for e in self.dependencies:
                 Q_new[e] = Q_old[e]
-                temp = 0
+                temp_Q[e] = 0
+                temp_QST[e] = {}
                 for (s, t) in self.dependencies[e]:
-                    temp_st = 0
+                    temp_QST[e][(s, t)] = 0
                     for p in self.dependencies[e][(s, t)]:
-                        temp_st += pow(D_old[(s, t)][p], n)
-                    temp += pow(temp_st, 1. / n)
-                temp -= self.bandwidth[e]
-                temp_Q[e] = temp
-                temp = np.expm1(temp)
-                Q_new[e] += stepsize * self.plus(Q_old[e], temp)
+                        temp_QST[e][(s, t)] += pow(D_old[(s, t)][p], n)
+                    temp_Q[e] += pow(temp_QST[e][(s, t)], 1. / n)
+                temp_Q[e] -= self.bandwidth[e]
+                Q_new[e] += stepsize * self.plus(Q_old[e], np.expm1(temp_Q[e]))
 
             temp_R = {}
+            temp_RST = {}
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
-                temp = 0
+                temp_RST[(s, t)] = 0
                 for p in range(len(self.paths[(s, t)])):
-                    temp += D_old[(s, t)][p]
-                temp -= self.sourceRates[(s, t)]
-                temp_R[(s, t)] = temp
-                temp = np.expm1(temp)
-                R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
+                    temp_RST[(s, t)] += pow(D_old[(s, t)][p], n)
+                temp_R[(s, t)] = pow(temp_RST[(s, t)], 1. / n)
+                temp_R[(s, t)] -= self.sourceRates[(s, t)]
+                R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], np.expm1(temp_R[(s, t)]))
 
             for (s, t) in self.paths:
                 for p in range(len(self.paths[(s, t)])):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
                                                                                np.expm1(-D_old[(s, t)][p]))
 
-                    temp = 0
                     path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
-                        temp_e = 0
-                        for p_e in self.dependencies[edge][(s, t)]:
-                            temp_e += pow(D_old[(s, t)][p_e], n)
+                        temp_e = temp_QST[edge][(s, t)]
                         if temp_e:
-                            temp += Q_old[edge] * np.exp(temp_Q[edge]) * pow(temp_e, 1. / n - 1)
+                            temp_q = Q_old[edge] * np.exp(temp_Q[edge]) * pow(temp_e, 1. / n - 1) * \
+                                     pow(D_old[(s, t)][p], n - 1)
                         else:
-                            temp += Q_old[edge] * np.exp(temp_Q[edge])
-                    temp *= pow(D_old[(s, t)][p], n - 1)
+                            temp_q = 0
+
+                    temp_st = temp_RST[(s, t)]
+                    if temp_st:
+                        temp_r = R_old[(s, t)] * np.exp(temp_R[(s, t)]) * pow(temp_st, 1. / n - 1) * \
+                                 pow(D_old[(s, t)][p], n - 1)
+                    else:
+                        temp_r = 0
 
                     D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
-                            1 - temp - R_old[(s, t)] * np.exp(temp_R[(s, t)])
-                            + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
+                            1 - temp_q - temp_r + U_old[(s, t)][p]) * np.exp(-D_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -660,11 +699,16 @@ class MaxTP(Learning):
         feasibility = self.feasibility(D_new)
         return D_new, [feasibility]
 
-    def Lagrangian(self, D, Q, R, U, n):
+
+class MaxFair(Learning):
+    def Lagrangian(self, D, Q, R, U, n, alpha):
         L = 0
-        for (s, t) in self.paths:
-            for p in range(len(self.paths[(s, t)])):
-                L += D[(s, t)][p]
+        for l in self.learners:
+            obj_l = 0
+            for s in self.sources:
+                (s, t, p) = self.slToStp[(s, l)]
+                obj_l += D[(s, t)][p]
+            L += self.utility(obj_l, alpha)
 
         for e in self.dependencies:
             temp = 0
@@ -674,24 +718,18 @@ class MaxTP(Learning):
                     temp_st += pow(D[(s, t)][p], n)
                 temp += pow(temp_st, 1. / n)
             temp -= self.bandwidth[e]
-            temp = np.expm1(temp)
             L -= Q[e] * temp
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
+            temp = max(D[(s, t)].values())
             temp -= self.sourceRates[(s, t)]
-            temp = np.expm1(temp)
             L -= R[(s, t)] * temp
 
         for (s, t) in self.paths:
             for p in range(len(self.paths[(s, t)])):
-                L -= U[(s, t)][p] * np.expm1(-D[(s, t)][p])
+                L += U[(s, t)][p] * U[(s, t)][p]
         return L
 
-
-class MaxFair(Learning):
     def utility(self, x, alpha):
         if alpha == 1.0:
             return cp.log(x)
@@ -721,9 +759,11 @@ class MaxFair(Learning):
             constr.append(temp <= self.bandwidth[e])
 
         for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
+            st_size = len(self.paths[(s, t)])
+            temp_st = cp.Variable(st_size)
+            for p in range(st_size):
+                constr.append(temp_st[p] == D[(s, t)][p])
+            temp = cp.max(temp_st)
             constr.append(temp <= self.sourceRates[(s, t)])
 
         obj = 0
@@ -767,22 +807,26 @@ class MaxFair(Learning):
                 D_new[(s, t)][p], D_old[(s, t)][p] = 0, 0.1
 
         for i in range(iterations):
+            temp_QST = {}
             for e in self.dependencies:
                 Q_new[e] = Q_old[e]
                 temp = 0
+                temp_QST[e] = {}
                 for (s, t) in self.dependencies[e]:
-                    temp_st = 0
+                    temp_QST[e][(s, t)] = 0
                     for p in self.dependencies[e][(s, t)]:
-                        temp_st += pow(D_old[(s, t)][p], n)
-                    temp += pow(temp_st, 1. / n)
+                        temp_QST[e][(s, t)] += pow(D_old[(s, t)][p], n)
+                    temp += pow(temp_QST[e][(s, t)], 1. / n)
                 temp -= self.bandwidth[e]
                 Q_new[e] += stepsize * self.plus(Q_old[e], temp)
 
+            temp_RST = {}
             for (s, t) in self.paths:
                 R_new[(s, t)] = R_old[(s, t)]
-                temp = 0
+                temp_RST[(s, t)] = 0
                 for p in range(len(self.paths[(s, t)])):
-                    temp += D_old[(s, t)][p]
+                    temp_RST[(s, t)] += pow(D_old[(s, t)][p], n)
+                temp = pow(temp_RST[(s, t)], 1. / n)
                 temp -= self.sourceRates[(s, t)]
                 R_new[(s, t)] += stepsize * self.plus(R_old[(s, t)], temp)
 
@@ -791,26 +835,28 @@ class MaxFair(Learning):
                     U_new[(s, t)][p] = U_old[(s, t)][p] + stepsize * self.plus(U_old[(s, t)][p],
                                                                                -D_old[(s, t)][p])
 
-                    temp = 0
                     path = self.paths[(s, t)][p].path
                     for j in range(len(path) - 1):
                         edge = (path[j], path[j + 1])
-                        temp_e = 0
-                        for p_e in self.dependencies[edge][(s, t)]:
-                            temp_e += pow(D_old[(s, t)][p_e], n)
+                        temp_e = temp_QST[edge][(s, t)]
                         if temp_e:
-                            temp += Q_old[edge] * pow(temp_e, 1. / n - 1)
+                            temp_q = Q_old[edge] * pow(temp_e, 1. / n - 1) * pow(D_old[(s, t)][p], n - 1)
                         else:
-                            temp += Q_old[edge]
-                    temp *= pow(D_old[(s, t)][p], n - 1)
+                            temp_q = 0
+
+                    temp_st = temp_RST[(s, t)]
+                    if temp_st:
+                        temp_r = R_old[(s, t)] * pow(temp_st, 1. / n - 1) * pow(D_old[(s, t)][p], n - 1)
+                    else:
+                        temp_r = 0
 
                     temp_sum = 0
                     l = self.paths[(s, t)][p].learner
                     for source in self.sources:
                         temp_sum += self.getLearnerRate(D_old, source, l)
 
-                    D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (temp_sum ** (-alpha) - temp -
-                                                                      R_old[(s, t)] + U_old[(s, t)][p])
+                    D_new[(s, t)][p] = D_old[(s, t)][p] + stepsize * (
+                            temp_sum ** (-alpha) - temp_q - temp_r + U_old[(s, t)][p])
 
                 U_old[(s, t)] = U_new[(s, t)].copy()
                 D_old[(s, t)] = D_new[(s, t)].copy()
@@ -818,37 +864,6 @@ class MaxFair(Learning):
 
         feasibility = self.feasibility(D_new)
         return D_new, [feasibility]
-
-    def Lagrangian(self, D, Q, R, U, n, alpha):
-        L = 0
-        for l in self.learners:
-            obj_l = 0
-            for s in self.sources:
-                (s, t, p) = self.slToStp[(s, l)]
-                obj_l += D[(s, t)][p]
-            L += self.utility(obj_l, alpha)
-
-        for e in self.dependencies:
-            temp = 0
-            for (s, t) in self.dependencies[e]:
-                temp_st = 0
-                for p in self.dependencies[e][(s, t)]:
-                    temp_st += pow(D[(s, t)][p], n)
-                temp += pow(temp_st, 1. / n)
-            temp -= self.bandwidth[e]
-            L -= Q[e] * temp
-
-        for (s, t) in self.paths:
-            temp = 0
-            for p in range(len(self.paths[(s, t)])):
-                temp += D[(s, t)][p]
-            temp -= self.sourceRates[(s, t)]
-            L -= R[(s, t)] * temp
-
-        for (s, t) in self.paths:
-            for p in range(len(self.paths[(s, t)])):
-                L += U[(s, t)][p] * U[(s, t)][p]
-        return L
 
 
 if __name__ == '__main__':
@@ -884,92 +899,92 @@ if __name__ == '__main__':
     with open(fname, 'rb') as f:
         P = pickle.load(f)
 
-    # if args.solver == 'DFW':
-    #     alg = FrankWolf(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
-    #
-    # if args.solver == 'FW':
-    #     alg = FrankWolf(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
-    #
-    # if args.solver == 'DPGA':
-    #     alg = ProjectAscent(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
-    #
-    # if args.solver == 'PGA':
-    #     alg = ProjectAscent(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
-    #
-    # if args.solver == 'DMaxTP':
-    #     alg = MaxTP(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.distributedAlg(iterations=1000, stepsize=args.stepsize)
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
-    #
-    # if args.solver == 'MaxTP':
-    #     alg = MaxTP(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.centralAlg()
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
-    #
-    # if args.solver == 'DMaxFair':
-    #     alg = MaxFair(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.distributedAlg(alpha=2, iterations=1000, stepsize=args.stepsize)
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
-    #
-    # if args.solver == 'MaxFair':
-    #     alg = MaxFair(P)
-    #     t1 = time.time()
-    #     Y, feasibilities = alg.centralAlg(alpha=2)
-    #     t2 = time.time()
-    #     obj = alg.objU(Y=Y, N1=100, N2=100)
-    #     period = t2 - t1
-    #     print(t2 - t1, Y, obj, feasibilities[-1])
+    if args.solver == 'DFW':
+        alg = FrankWolf(P)
+        t1 = time.time()
+        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
+
+    if args.solver == 'FW':
+        alg = FrankWolf(P)
+        t1 = time.time()
+        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
+
+    if args.solver == 'DPGA':
+        alg = ProjectAscent(P)
+        t1 = time.time()
+        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=args.stepsize)
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
+
+    if args.solver == 'PGA':
+        alg = ProjectAscent(P)
+        t1 = time.time()
+        Y, feasibilities = alg.alg(iterations=50, head=10, N1=50, N2=50, stepsize=0)
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
+
+    if args.solver == 'DMaxTP':
+        alg = MaxTP(P)
+        t1 = time.time()
+        Y, feasibilities = alg.distributedAlg(iterations=1000, stepsize=args.stepsize)
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
+
+    if args.solver == 'MaxTP':
+        alg = MaxTP(P)
+        t1 = time.time()
+        Y, feasibilities = alg.centralAlg()
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
+
+    if args.solver == 'DMaxFair':
+        alg = MaxFair(P)
+        t1 = time.time()
+        Y, feasibilities = alg.distributedAlg(alpha=2, iterations=1000, stepsize=args.stepsize)
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
+
+    if args.solver == 'MaxFair':
+        alg = MaxFair(P)
+        t1 = time.time()
+        Y, feasibilities = alg.centralAlg(alpha=2)
+        t2 = time.time()
+        obj = alg.objU(Y=Y, N1=100, N2=100)
+        period = t2 - t1
+        print(t2 - t1, Y, obj, feasibilities[-1])
 
     fname = 'Result_{}/Result_{}_{}learners_{}sources_{}types_{}stepsize'.format(
         args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
-    # logging.info('Save in ' + fname)
-    # with open(fname, 'wb') as f:
-    #     pickle.dump((period, Y, obj, feasibilities), f)
-
-    with open(fname, 'rb') as f:
-        result = pickle.load(f)
-
-    alg = Learning(P)
-    Y = result[1]
-    feasibility = alg.feasibility(Y)
-    fname = 'Result_{}/Infeasibility_{}_{}learners_{}sources_{}types_{}stepsize'.format(
-        args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
-        pickle.dump(feasibility, f)
+        pickle.dump((period, Y, obj, feasibilities), f)
+
+    # with open(fname, 'rb') as f:
+    #     result = pickle.load(f)
+    #
+    # alg = Learning(P)
+    # Y = result[1]
+    # feasibility = alg.feasibility(Y)
+    # fname = 'Result_{}/Infeasibility_{}_{}learners_{}sources_{}types_{}stepsize'.format(
+    #     args.solver, args.graph_type, args.learners, args.sources, args.types, args.stepsize)
+    # logging.info('Save in ' + fname)
+    # with open(fname, 'wb') as f:
+    #     pickle.dump(feasibility, f)

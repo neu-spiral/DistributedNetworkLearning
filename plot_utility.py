@@ -12,12 +12,14 @@ topology1 = ['geant', 'abilene', 'dtelekom']
 topology2 = {'erdos_renyi': 'ER', 'hypercube': 'HC', 'small_world': 'SW', 'grid_2d': 'grid', 'balanced_tree': 'BT',
              'star': 'star'}
 
-Stepsizes1 = [0.1, 0.01, 0.1, 0.01, 0.02, 0.01, 0.1, 0.01]
-Stepsizes2 = {'erdos_renyi': [0.07, 0.01, 0.05, 0.01, 0.05, 0.01, 0.3, 0.01],
-              'hypercube': [0.05, 0.01, 0.05, 0.01, 0.05, 0.01, 0.1, 0.01],
-              'small_world': [0.02, 0.01, 0.01, 0.01, 0.05, 0.01, 0.2, 0.01],
-              'grid_2d': [0.02, 0.01, 0.05, 0.01, 0.01, 0.01, 0.1, 0.01],
-              'balanced_tree': [0.02, 0.01, 0.05, 0.01, 0.005, 0.01, 0.05, 0.01],
+Stepsizes1 = {'geant': [0.1, 0.01, 0.1, 0.01, 0.02, 0.01, 0.02, 0.01],
+              'abilene': [0.05, 0.01, 0.005, 0.01, 0.2, 0.01, 0.4, 0.01],
+              'dtelekom': [0.01, 0.01, 0.1, 0.01, 0.03, 0.01, 0.1, 0.01]}
+Stepsizes2 = {'erdos_renyi': [0.03, 0.01, 0.05, 0.01, 0.03, 0.01, 0.4, 0.01],
+              'hypercube': [0.02, 0.01, 0.05, 0.01, 0.05, 0.01, 0.2, 0.01],
+              'small_world': [0.05, 0.01, 0.05, 0.01, 0.05, 0.01, 0.2, 0.01],
+              'grid_2d': [0.01, 0.01, 0.05, 0.01, 0.01, 0.01, 0.1, 0.01],
+              'balanced_tree': [0.005, 0.01, 0.01, 0.01, 0.001, 0.01, 0.01, 0.01],
               'star': [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.05, 0.01]}
 
 
@@ -57,7 +59,7 @@ def barplot(x, type):
     lgd = fig.legend(labels=algorithm, loc='upper center', bbox_to_anchor=(0.48, 1.11), ncol=len(algorithm), fontsize=13,
                      handletextpad=0.1, columnspacing=0.6)
     plt.show()
-    fig.savefig('Figure/' + type + '.pdf', bbox_extra_artists=(lgd,), bbox_inches='tight')
+    fig.savefig('Figure_15/' + type + '.pdf', bbox_extra_artists=(lgd,), bbox_inches='tight')
 
 
 if __name__ == '__main__':
@@ -76,50 +78,50 @@ if __name__ == '__main__':
     for alg in algorithm:
         obj[alg] = {}
 
-    for i in range(len(topology1)):
+    for top in topology1:
         for j in range(len(algorithm)):
             if args.type == 'beta':
-                fname = 'Result_{}/beta_{}_3learners_3sources_2types_{}stepsize'.format(
-                    algorithm[j], topology1[i], Stepsizes1[j])
+                fname = 'Result_15_{}/beta_{}_3learners_3sources_2types_{}stepsize'.format(
+                    algorithm[j], top, Stepsizes1[top][j])
                 result = readresult(fname)
-                obj[algorithm[j]][topology1[i]] = result
-            elif args.type == 'Infeasibility':
-                fname = 'Result_{}/Infeasibility_{}_3learners_3sources_2types_{}stepsize'.format(
-                    algorithm[j], topology1[i], Stepsizes1[j])
-                result = readresult(fname)
-                obj[algorithm[j]][topology1[i]] = result
+                obj[algorithm[j]][top] = result
+            # elif args.type == 'Infeasibility':
+            #     fname = 'Result_{}/Infeasibility_{}_3learners_3sources_2types_{}stepsize'.format(
+            #         algorithm[j], topology1[i], Stepsizes1[j])
+            #     result = readresult(fname)
+            #     obj[algorithm[j]][topology1[i]] = result
             else:
-                fname = 'Result_{}/Result_{}_3learners_3sources_2types_{}stepsize'.format(
-                    algorithm[j], topology1[i], Stepsizes1[j])
+                fname = 'Result_15_{}/Result_{}_3learners_3sources_2types_{}stepsize'.format(
+                    algorithm[j], top, Stepsizes1[top][j])
                 result = readresult(fname)
                 if args.type == 'Result':
-                    obj[algorithm[j]][topology1[i]] = result[2]
+                    obj[algorithm[j]][top] = result[2]
                 elif args.type == 'Time':
-                    obj[algorithm[j]][topology1[i]] = result[0]
-                # elif args.type == 'Infeasibility':
-                #     obj[algorithm[j]][topology1[i]] = result[3][-1]
+                    obj[algorithm[j]][top] = result[0]
+                elif args.type == 'Infeasibility':
+                    obj[algorithm[j]][top] = result[3][-1]
 
     for top in topology2:
         for j in range(len(algorithm)):
             if args.type == 'beta':
-                fname = 'Result_{}/beta_{}_5learners_10sources_3types_{}stepsize'.format(
+                fname = 'Result_15_{}/beta_{}_5learners_10sources_3types_{}stepsize'.format(
                     algorithm[j], top, Stepsizes2[top][j])
                 result = readresult(fname)
                 obj[algorithm[j]][topology2[top]] = result
-            elif args.type == 'Infeasibility':
-                fname = 'Result_{}/Infeasibility_{}_5learners_10sources_3types_{}stepsize'.format(
-                    algorithm[j], top, Stepsizes2[top][j])
-                result = readresult(fname)
-                obj[algorithm[j]][topology2[top]] = result
+            # elif args.type == 'Infeasibility':
+            #     fname = 'Result_{}/Infeasibility_{}_5learners_10sources_3types_{}stepsize'.format(
+            #         algorithm[j], top, Stepsizes2[top][j])
+            #     result = readresult(fname)
+            #     obj[algorithm[j]][topology2[top]] = result
             else:
-                fname = 'Result_{}/Result_{}_5learners_10sources_3types_{}stepsize'.format(
+                fname = 'Result_15_{}/Result_{}_5learners_10sources_3types_{}stepsize'.format(
                     algorithm[j], top, Stepsizes2[top][j])
                 result = readresult(fname)
                 if args.type == 'Result':
                     obj[algorithm[j]][topology2[top]] = result[2]
                 elif args.type == 'Time':
                     obj[algorithm[j]][topology2[top]] = result[0]
-                # elif args.type == 'Infeasibility':
-                #     obj[algorithm[j]][topology2[top]] = result[3][-1]
+                elif args.type == 'Infeasibility':
+                    obj[algorithm[j]][topology2[top]] = result[3][-1]
 
     barplot(obj, args.type)

@@ -150,6 +150,7 @@ def main():
     bandwidth = {}
     for e in G.edges():
         bandwidth[e] = random.uniform(args.min_bandwidth, args.max_bandwidth)
+        G[e[0]][e[1]]['weight'] = 1. / bandwidth[e]
 
     logging.info('Generating types')
     if args.learners <= args.types:
@@ -175,21 +176,26 @@ def main():
     prior['cov'] = {}
     prior['mean'] = {}
     i = 0
-    valid_dimension = int(np.floor(args.dimension / args.learners))
+    valid_dimension = int(np.floor(args.dimension / args.types))
     noices = {}
+    means = {}
+    diags = {}
     for t in types:
+        means[t] = np.zeros((args.dimension, 1))
+        means[t][i * valid_dimension:(i + 1) * valid_dimension] = np.ones((valid_dimension, 1))
+        diags[t] = np.random.uniform(0, 0.01, args.dimension)
+        diags[t][i * valid_dimension:(i + 1) * valid_dimension] = np.random.uniform(1, 2, valid_dimension)
+        i += 1
         for s in sources:
             noices[(t, s)] = np.random.uniform(0.5, 1)
+
     for l in learners:
-        diag = np.random.uniform(0, 0.01, args.dimension)
-        diag[i * valid_dimension:(i + 1) * valid_dimension] = np.random.uniform(1, 2, valid_dimension)
-        prior['cov'][l] = np.diag(diag)
+        l_to_t = l_t_dict[l]
+        prior['mean'][l] = means[l_to_t]
+        prior['cov'][l] = np.diag(diags[l_to_t])
         prior['noice'][l] = {}
         for s in sources:
-            prior['noice'][l][s] = noices[(l_t_dict[l], s)]
-        prior['mean'][l] = np.zeros((args.dimension, 1))
-        prior['mean'][l][i * valid_dimension:(i + 1) * valid_dimension] = np.ones((valid_dimension, 1))
-        i += 1
+            prior['noice'][l][s] = noices[(l_to_t, s)]
 
     logging.info('Generating source rates, paths and parameters of data')
     sourceRates = {}
@@ -220,8 +226,8 @@ def main():
         i += 1
 
     P = Problem(sourceRates, sources, learners, bandwidth, G, paths, prior, args.T, slToStp, sourceParameters)
-    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types_{}rate'.format(
-        args.graph_type, args.learners, args.sources, args.types, int(args.max_datarate))
+    fname = 'Problem_10/Problem_{}_{}learners_{}sources_{}types'.format(
+        args.graph_type, args.learners, args.sources, args.types)
     logging.info('Save in ' + fname)
     with open(fname, 'wb') as f:
         pickle.dump(P, f)
